@@ -3,27 +3,10 @@
 # Background
 Due to the increasing threats and attacks on network infrastructure, it has become essential for companies to closely monitor the traffic flowing through their network systems. This monitoring allows them to promptly identify unusual network activity, often caused by malicious actors. This project addresses this concern by developing a solution that continuously monitors network traffic in nearly real-time and triggers alerts whenever any abnormal behavior is detected.
 
-# Technologies
-- BigQuery
-- Cloud Storage
-- Pub/Sub
-- DataFlow
-- Cloud Build
-- Vertex AI
 
-# Steps :
-- Historical Data Ingestion
-- Realtime Data Ingestion
-- Data Normalization
-- Feature Store 
-- Model Development
-- Model Serving in real Time
-- Model Retraining for Drift
-
-# NetLog Data Description
+## NetLog Data Description
+```
 - subscriberId: This field represent the identifier of the subscriber or user associated with the network activity. 
-<!-- Depending on your use case, this information may or may not be relevant for anomaly detection. It could be useful for tracking user-specific behavior. -->
-
 - srcIP: The source IP address represents the sender's IP address. 
 - dstIP: The destination IP address indicates where the network traffic is being sent.
 - srcPort: Source port refers to the port number used on the sender's side of the connection. Port numbers can help identify the application or service associated with the traffic.
@@ -40,3 +23,22 @@ Due to the increasing threats and attacks on network infrastructure, it has beco
 - geoCity: The city associated with the IP address. Like geoCountry, this can be used to track traffic from specific geographical areas.
 - latitude: These fields provide precise geographical coordinates. They can be used for mapping the locations of network activity and detecting unusual patterns geographically.
 - longitude: These fields provide precise geographical coordinates. They can be used for mapping the locations of network activity and detecting unusual patterns geographically.
+```
+<!-- Depending on your use case, this information may or may not be relevant for anomaly detection. It could be useful for tracking user-specific behavior. -->
+
+## Technologies
+- BigQuery
+- Cloud Storage
+- Pub/Sub
+- DataFlow
+- Cloud Build
+- Vertex AI
+
+## Steps :
+- Historical Data Ingestion
+- Realtime Data Ingestion
+- Data Normalization
+- Feature Store 
+- Model Development
+- Model Serving in real Time
+- Model Retraining for Drift
