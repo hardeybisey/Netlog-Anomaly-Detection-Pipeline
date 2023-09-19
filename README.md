@@ -5,24 +5,23 @@ Due to the increasing threats and attacks on network infrastructure, it has beco
 
 
 ## NetLog Data Description
-- **subscriberId**: This field represent the identifier of the subscriber or user associated with the network activity. 
-- **srcIP**: The source IP address represents the sender's IP address. 
-- **dstIP**: The destination IP address indicates where the network traffic is being sent.
-- **srcPort**: Source port refers to the port number used on the sender's side of the connection. Port numbers can help identify the application or service associated with the traffic.
-- **dstPort**: Destination port is the port number used on the receiver's side of the connection. It's important for determining the service or application receiving the traffic.
-- **txBytes**: This field indicates the number of bytes transmitted from the source to the destination. Unusual spikes in data volume can be indicative of anomalies.
-- **rxBytes**: It represents the number of bytes received by the destination. Similar to txBytes, monitoring rxBytes helps identify unusual data patterns.
-- **tcpFlag**: TCP flags provide information about the state of a TCP connection (e.g., SYN, ACK, FIN). Anomalies in flag patterns may indicate suspicious behavior.
-- **startTime**: The timestamp indicating when the connection or network activity started.
-- **endTime**: The timestamp representing when the connection or activity ended. Duration of connections can be analyzed for anomalies.
-- **timestamp**: A timestamp indicating when the log entry was recorded.
-- **protocolName**: This field specifies the name of the protocol used for the network connection (e.g., HTTP, UDP, TCP). Anomalies can be detected by monitoring protocol usage.
-- **protocolNumber**: This might represent the protocol as a numeric identifier (e.g., 6 for TCP, 17 for UDP). It can be used to classify connections based on protocols.
-- **geoCountry**: The country associated with the IP address. Geo-location data can help identify suspicious traffic from unexpected locations.
-- **geoCity**: The city associated with the IP address. Like geoCountry, this can be used to track traffic from specific geographical areas.
-- **latitude**: These fields provide precise geographical coordinates. They can be used for mapping the locations of network activity and detecting unusual patterns geographically.
-- **longitud**e: These fields provide precise geographical coordinates. They can be used for mapping the locations of network activity and detecting unusual patterns geographically.
-<!-- Depending on your use case, this information may or may not be relevant for anomaly detection. It could be useful for tracking user-specific behavior. -->
+- **subscriberId:** This field represent the identifier of the subscriber or user associated with the network activity. 
+- **srcIP:** The `srcIP` address represents the sender's IP address. 
+- **dstIP:** The `dstIP` address indicates where the network traffic is being sent.
+- **srcPort:** `srcPort` refers to the port number used on the sender's side of the connection. Port numbers can help identify the application or service associated with the traffic.
+- **dstPort:** `dstPort` is the port number used on the receiver's side of the connection. It's important for determining the service or application receiving the traffic.
+- **txBytes:** This field indicates the number of bytes transmitted from the source to the destination. Unusual spikes in data volume can be indicative of anomalies.
+- **rxBytes:** It represents the number of bytes received by the destination. Similar to `txBytes`, monitoring `rxBytes` helps identify unusual data patterns.
+- **tcpFlag:** `tcpFlag` provide information about the state of a TCP connection (e.g., SYN, ACK, FIN). Anomalies in flag patterns may indicate suspicious behavior.
+- **startTime:** The `startTime` indicates when the connection or network activity started.
+- **endTime:** The `endTime` indicates when the connection or activity ended. Duration of connections can be analyzed for anomalies.
+- **timestamp:** A `timestamp` indicating when the log entry was recorded.
+- **protocolName:** This field specifies the name of the protocol used for the network connection (e.g., HTTP, UDP, TCP). Anomalies can be detected by monitoring protocol usage.
+- **protocolNumber:** This might represent the protocol as a numeric identifier (e.g., 6 for TCP, 17 for UDP). It can be used to classify connections based on protocols.
+- **geoCountry:** The country associated with the `srcIP`. Geo-location data can help identify suspicious traffic from unexpected locations.
+- **geoCity:** The city associated with the `srcIP`. Like geoCountry, this can be used to track traffic from specific geographical areas.
+- **latitude:** These fields provide precise geographical coordinates associated with the `srcIP`. They can be used for mapping the locations of network activity and detecting unusual patterns geographically.
+- **longitud**e: These fields provide precise geographical coordinates associated with the `srcIP`. They can be used for mapping the locations of network activity and detecting unusual patterns geographically.
 
 ## Technologies
 - BigQuery
@@ -40,3 +39,19 @@ Due to the increasing threats and attacks on network infrastructure, it has beco
 - Model Development
 - Model Serving in real Time
 - Model Retraining for Drift
+
+# Generating Mock Data
+To ensure the creation of consistent and meaningful mock data, we implemented specific techniques:
+
+1. **Time Sequencing:** We establish a logical sequence in our data by guaranteeing that the end time of an event always occurs after the start time. The time intervals between events are generated from a uniform distribution with an adjustable parameter known as `average_time_between_requests` (measured in seconds). This parameter allows us to control the time gaps between events, introducing a sense of order into the data.
+
+2. **Btyes Size Per Request:** Additionally, the value of the time gap, determined by `average_time_between_requests`, plays a dual role in controlling the size of the `txBytes` (bytes transmitted) and `rxBytes` (bytes received) fields. By manipulating this parameter, we can influence the data volume associated with each event. This approach enables us to create data that mimics various scenarios, from low traffic to high-volume data transfers, providing a more comprehensive testing environment.
+
+3. **Geolocation Attributes:** To enhance the realism of the data generated, the Value of the `srcIP` is used to derive related attributes, including `geoCountry`, `geoCity`, `latitude`, and `longitude`. This data synergy enriches the mock data's context.
+
+4. **Destination IP:** We recognize the need for determinism in generating the `dstIP`. This attribute's deterministic nature is vital because it plays a vital role during aggregation of the events. Hence, we've implemented a custom generator to ensure consistency and reliability in the data simulation.
+
+
+<!-- These techniques not only eliminate randomness but also empower you to simulate data that aligns with specific use cases and testing scenarios. Adjusting the `average_time_between_requests` parameter offers flexibility in shaping the characteristics of your mock data for more meaningful testing and analysis.
+
+These strategies collectively eliminate randomness from the data generation process, imbuing your mock data with structure, relevance, and precision. This approach not only facilitates rigorous testing but also enables you to replicate a wide array of scenarios, fostering comprehensive evaluation and analysis. The flexibility provided by these techniques empowers you to tailor your mock data to specific use cases and testing objectives. -->

@@ -30,11 +30,15 @@
     },
     {
       "name": "startTime",
-      "type": "INTEGER"
+      "type": "DATETIME"
     },
     {
       "name": "endTime",
-      "type": "INTEGER"
+      "type": "DATETIME"
+    },
+    {
+      "name":"timeStamp",
+      "type":"DATETIME" 
     },
     {
       "name": "tcpFlag",
