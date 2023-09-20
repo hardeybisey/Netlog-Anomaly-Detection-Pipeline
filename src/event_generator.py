@@ -1,21 +1,35 @@
-from dataclasses import dataclass
-from faker import Faker
+#!/Users/hardey/Desktop/GITHUB/AnomalyDetectionPipeline/apache-beam/bin/python3
+
+import time
+import json
 import random
 import argparse
+from faker import Faker
+from dataclasses import dataclass
 from datetime import datetime, timedelta
-
-faker = Faker()
-
-parser = argparse.ArgumentParser(__file__, description="Netlog Data Generator")
-parser.add_argument("--num_events", "-e", type=int, dest="num_events", help="The number of events to create", default=100000)
-parser.add_argument("--num_unique_dest_ip", "-ip", type=int, dest="num_unique_dest_ip", help="The number of unique destination IPs", default=1000)
-parser.add_argument("--min_time_between_requests", "-l", type=int, dest="min_time_between_requests", help="The minimum time between requests", default=10)
+from google.cloud import pubsub_v1
 
 
-min_time_between_requests = 10
-num_unique_dest_ip= 1000
+TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+TCP_FLAGS = ["URG", "ACK", "PSH", "RST", "SYN", "FIN"]
+PROTOCOL_NAMES = ["TCP", "UDP", "HTTP", "HTTPS"]
+protocol_mapping = {"TCP": 6, "UDP": 17, "HTTP": 80, "HTTPS": 443}
+project_id=None 
+topic_name= None
 
-
+@dataclass
+class User:
+    subcriber_id : str
+    src_ip : str
+    src_port: int
+    
+@dataclass
+class Destination:
+    dest_ip : str
+    dest_port : int
+    protocol_name : str
+    protocol_num : int
+            
 @dataclass
 class NetLogRaw:
     subscriberId : str
@@ -32,49 +46,133 @@ class NetLogRaw:
     protocolNumber : int
 
 
+def generate_users(num_users):
+    return [User(faker.uuid4(), faker.ipv4(),faker.port_number()) for _ in range(num_users)]
+    
+def generate_destination_ips(num_dest_ip):
+    proto_col_name = random.choice(PROTOCOL_NAMES)
+    protocol_num = protocol_mapping[proto_col_name]
+    return [Destination(faker.ipv4_private(), faker.port_number(), proto_col_name, protocol_num) for _ in range(num_dest_ip)]
 
-class NetLogGenerator:
-    def __init__(self, min_time_between_requests,num_events=1000, num_dest_ip=1000, max_bytes=3000):
-        self.min_lag_time = min_time_between_requests
-        self.num_events = num_events
-        self.max_bytes = max_bytes
-        self.max_bytes = 3000
-        self.date_fmt = "%Y-%m-%d %H:%M:%S"
-        self.dest_ips = self.generate_destination_ip(num_dest_ip)
+def normalized_bytes(lag_time, max_bytes):
+    random_byte = random.randint(10, 100)
+    normalized_byte = random_byte * lag_time
+    return min(normalized_byte, max_bytes)
 
-    def generate_netlog(self):
-        fmt = self.date_fmt
-        subcriber_id = faker.uuid4()
-        src_ip = faker.ipv4()
-        dest_ip = random.choice(self.dest_ips)
-        src_port = faker.port_number()
-        dest_port = faker.port_number()
-        time_diff = random.uniform(0, self.min_lag_time * 2)
+def generate_netlog(user, dest, avg_time_between_requests, max_bytes):
+    while True:
         start_time = datetime.now()
+        time_diff = random.uniform(0, avg_time_between_requests * 2)
         end_time = start_time + timedelta(seconds=time_diff)
-        tx_bytes = self.normalized_bytes(time_diff, self.max_bytes)
-        rx_bytes = self.normalized_bytes(time_diff, self.max_bytes)
-        tcp_flag = random.choice(["URG", "ACK", "PSH", "RST", "SYN", "FIN"])
-        protocol_name = random.choice(["TCP", "UDP", "HTTP", "HTTPS"])
-        protocol_number = self.protocol_dict()[protocol_name]
-        return NetLogRaw(subcriber_id, src_ip, dest_ip, src_port, dest_port, tx_bytes, rx_bytes, tcp_flag, start_time.strftime(fmt), end_time.strftime(fmt), protocol_name, protocol_number)
         
-    def normalized_bytes(self, lag_time, max_bytes):
-        random_byte = random.randint(10, 100)
-        # Normalize the random byte value by a factor of the lag time (larger lag time makes the byte larger)
-        normalized_byte = random_byte * lag_time
-        # Cap the normalized byte value to the specified maximum value
-        return min(normalized_byte, max_bytes)
 
-    def generate_destination_ip(self, num_dest_ip):
-        return list(faker.ipv4_private() for _ in range(num_dest_ip))
+    start_time = datetime.now()
+    time_diff = random.uniform(0, avg_time_between_requests * 2)
+    end_time = start_time + timedelta(seconds=time_diff)
     
-    def protocol_dict(self):
-        return {"TCP": 6, "UDP": 17, "HTTP": 80, "HTTPS": 443}
+    return NetLogRaw(user.subcriber_id,
+                     user.src_ip,
+                     user.src_port,
+                     dest.dest_ip,
+                     dest.dest_port, 
+                     normalized_bytes(time_diff, max_bytes), 
+                     normalized_bytes(time_diff, max_bytes), 
+                     random.choice(TCP_FLAGS), 
+                     start_time.strftime(TIME_FORMAT), 
+                     end_time.strftime(TIME_FORMAT), 
+                     dest.protocol_name, 
+                     dest.protocol_num)
     
-    def run(self):
-        for _ in range(self.num_events):
-            yield self.generate_netlog()
-            
+    
+    
+    
+# def sleep_then_publish(publisher, topic_path, data, timestamp):
+#     time.sleep(timestamp)
+#     publisher.publish(topic_path, data=data, timestamp=timestamp)
+    
+# def publish_burst(publisher, topic_path, burst):
+#     for event_dict in burst:
+#         json_str = json.dumps(event_dict)
+#         data = json_str.encode('utf-8')
+#         publisher.publish(topic_path, data=data, timestamp=datetime.now().strftime(TIME_FORMAT))
+
+# def generate_netlog(user, dest):
+#     # src_port, dest_port, protocol_name, protocol_num, max_byte
+#     publisher = pubsub_v1.PublisherClient()
+#     topic_path = publisher.topic_path(project_id, topic_name)
+#     events = []
+#     while True:
+#         # source , destination = 
+#         start_time = datetime.now()
+#         time_diff = random.uniform(0, avg_time_between_requests * 2)
+#         end_time = start_time + timedelta(seconds=time_diff)
+        
+#         yield NetLogRaw(user.subcriber_id,
+#                         user.src_ip,
+#                         user.src_port,
+#                         dest.dest_ip,
+#                         dest.dest_port, 
+#                         normalized_bytes(time_diff, max_bytes), 
+#                         normalized_bytes(time_diff, max_bytes), 
+#                         random.choice(TCP_FLAGS), 
+#                         start_time.strftime(TIME_FORMAT), 
+#                         end_time.strftime(TIME_FORMAT), 
+#                         dest.protocol_name, 
+#                         dest.protocol_num)
+ 
+# def burst_generator(num_events, users, dest_ips, avg_time_between_requests, max_bytes):
+#     for event_dict in burst:
+#         json_str = json.dumps(event_dict)
+#         data = json_str.encode('utf-8')
+#         publisher.publish(topic_path, data=data, timestamp=event_dict['timestamp'])
+        
+        
+    for _ in range(num_events):
+        yield generate_netlog(users, dest_ips, avg_time_between_requests, max_bytes)        
 if __name__ == "__main__":
-    pass
+    parser = argparse.ArgumentParser(__file__, description="Netlog Data Generator")
+    parser.add_argument("--num_events", "-e", type=int, dest="num_events", help="The number of events", default=1000000)
+    parser.add_argument("--unique_dest_ips", type=int, dest="ips", help="The number of unique destination IPs", default=1000)
+    parser.add_argument("--avg_time_between_requests", "-time", type=int, dest="avg_time_between_requests", help="The avg time between requests", default=10)
+    parser.add_argument("--num_users", "-u", type=int, dest="num_users", help="The number of users", default=10000)
+    parser.add_argument("--max_bytes", "-b", type=str, dest="max_bytes", help="The output file", default=5000)
+
+    args = parser.parse_args()
+    
+    max_bytes = args.max_bytes
+    num_users = args.num_users   
+    num_events = args.num_events
+    num_unique_dest_ip = args.unique_dest_ips   
+    avg_time_between_requests = args.avg_time_between_requests
+    
+    
+
+    users = [generate_user() for _ in range(num_users)]
+    dest_ips = generate_destination_ips(num_unique_dest_ip)
+    
+
+
+    users = json.loads(open("users.json").read())
+    dest_ips = json.loads(open("dest_ips.json").read())
+    
+if __name__ == "__main__":
+    faker = Faker()
+    parser = argparse.ArgumentParser(__file__, description="Netlog Data Generator")
+    parser.add_argument("--num_users", "-e", type=int, dest="num_users", help="The number of users to create", default=10000)
+    parser.add_argument("--output", "-o", type=str, dest="output", help="The output file", default="users.json")
+    
+    args = parser.parse_args()
+    
+    users = [generate_user() for _ in range(args.num_users)]
+    users_to_json(users, args.output)
+
+
+
+
+# faker = Faker()
+
+# parser = argparse.ArgumentParser(__file__, description="Netlog Data Generator")
+# parser.add_argument("--num_events", "-e", type=int, dest="num_events", help="The number of events to create", default=100000)
+# parser.add_argument("--num_unique_dest_ip", "-ip", type=int, dest="num_unique_dest_ip", help="The number of unique destination IPs", default=1000)
+# parser.add_argument("--min_time_between_requests", "-l", type=int, dest="min_time_between_requests", help="The minimum time between requests", default=10)
+
