@@ -55,3 +55,10 @@ To ensure the creation of consistent and meaningful mock data, we implemented sp
 <!-- These techniques not only eliminate randomness but also empower you to simulate data that aligns with specific use cases and testing scenarios. Adjusting the `average_time_between_requests` parameter offers flexibility in shaping the characteristics of your mock data for more meaningful testing and analysis.
 
 These strategies collectively eliminate randomness from the data generation process, imbuing your mock data with structure, relevance, and precision. This approach not only facilitates rigorous testing but also enables you to replicate a wide array of scenarios, fostering comprehensive evaluation and analysis. The flexibility provided by these techniques empowers you to tailor your mock data to specific use cases and testing objectives. -->
+
+
+<!-- 1) gcloud auth configure-docker -->
+
+
+gcloud builds submit . --config cloud-build.yaml
+export _REGION="EU"

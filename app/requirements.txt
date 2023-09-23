@@ -1,0 +1,4 @@
+pip==23.2.1
+Faker==19.6.1
+google-cloud-pubsub==2.18.4
+requests==2.31.0
