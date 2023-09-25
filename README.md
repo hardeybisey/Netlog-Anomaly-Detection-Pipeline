@@ -62,3 +62,6 @@ These strategies collectively eliminate randomness from the data generation proc
 
 gcloud builds submit . --config cloud-build.yaml
 export _REGION="EU"
+export PROJECT_ID=electric-armor-395015
+export BUCKET=my_terraform_state_bucket
+gcloud dataflow flex-template run

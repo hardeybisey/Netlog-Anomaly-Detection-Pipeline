@@ -1,0 +1,38 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args: ['build', '-t', 'gcr.io/${PROJECT_ID}/netlog-stream-template:v1', '.']
+
+  - name: gcr.io/cloud-builders/gcloud
+    args: 
+      - dataflow
+      - flex-template
+      - build
+      - gs://${_BUCKET}/templates/netlog-stream.json
+      - '--project=${PROJECT_ID}'
+      - '--image=gcr.io/${PROJECT_ID}/netlog-stream-template:v1'
+      - '--sdk-language=PYTHON'
+      - '--metadata-file=metadata.json'
+
+  - name: gcr.io/cloud-builders/gcloud
+    args: 
+      - dataflow
+      - flex-template
+      - run
+      - netlog-stream-job
+      - '--template-file-gcs-location=gs://${_BUCKET}/templates/netlog-stream.json'
+      - '--max-workers=1'
+      - '--region=europe-west1'
+      - '--worker-machine-type=n1-standard-1'
+      - '--enable-streaming-engine'
+      - '--parameters=topic=projects/${PROJECT_ID}/topics/${_TOPIC_NAME},qps=100'
+images:
+- 'gcr.io/${PROJECT_ID}/netlog-stream-template:v1'
+substitutions:
+  _TOPIC_NAME: test
+  _BUCKET: test12345677
+
+# gcloud builds submit . --config data-generator.yaml --substitutions _BUCKET=test12345677
+
+# docker pull gcr.io/${PROJECT_ID}/netlog-stream-template:v1
+
+# gcloud pubsub subscriptions pull test-sub --auto-ack --limit=2

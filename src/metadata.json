@@ -1,0 +1,20 @@
+{
+    "name": "Netlog-streaming-template",
+    "description": "Netlog Streaming Dataflow Flex template",
+    "parameters": [
+        {
+            "name": "topic",
+            "label": "Pub/Sub topic",
+            "helpText": "Pub/Sub topic to read from",
+            "description": "Pub/Sub topic to write to",
+            "isOptional": false
+        },
+        {
+            "name": "qps",
+            "label": "qps",
+            "helpText": "Number of users per second to simulate",
+            "description": "Number of users per second to simulate",
+            "isOptional": false            
+        }
+    ]    
+}
