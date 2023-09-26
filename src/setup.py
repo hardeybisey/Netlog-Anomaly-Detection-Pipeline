@@ -7,7 +7,7 @@ setuptools.setup(
     description="A Beam Flex Template for Python",
     packages=setuptools.find_packages(),
     install_requires=[
-        "Faker==5.0.0"
+        "Faker==19.6.2",
+        "apache-beam[gcp]==2.48.0"
     ],
-    python_requires=">=3.9" ,
     )

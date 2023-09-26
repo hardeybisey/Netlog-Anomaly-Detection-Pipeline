@@ -1,27 +1,13 @@
 
 import time
 import json
-import random
 import logging
+import random
 from faker import Faker
 import apache_beam as beam
-from typing import NamedTuple
-from datetime import datetime, timedelta
 from utils.custom import NetworkPool, UserObject, JsonEvent
 from apache_beam.transforms.periodicsequence import PeriodicImpulse
 from apache_beam.options.pipeline_options import PipelineOptions
-
-
-class StreamingPipelinOptions(PipelineOptions):
-    @classmethod
-    def _add_argparse_args(cls, parser):
-        parser.add_argument(
-            '--topic', type = str,
-            help='pubsub topic for the pipeline to publish to',required=True)
-        
-        parser.add_argument(
-            '--qps',type=int,
-            help='the qps to generate events at',required=True)
         
 def to_json(event):
     return json.dumps(event).encode('utf-8')        
@@ -34,28 +20,22 @@ class EventGenerator(beam.DoFn):
     def setup(self):
         self.user_obj = UserObject()    
 
-    def process(self, element, window=beam.DoFn.WindowParam):
+    def process(self, element):
         network = self.network_pool.get_network()
         user = self.user_obj.get_user()
         num_events = random.randint(5, self.max_events_per_session)
         for _ in range(num_events):
             event = JsonEvent.generate(user, network)
-            yield beam.window.TimestampedValue(event, window.start)
+            yield event
                         
-def run(options):
-    options.view_as(beam.options.pipeline_options.SetupOptions).save_main_session = True
+def run(args, beam_args):
+    options = PipelineOptions(beam_args, save_main_session=True, streaming=True)
     pipeline = beam.Pipeline(options=options)
     (
         pipeline
-        | "Trigger" >> PeriodicImpulse(start_timestamp=time.time(), fire_interval=(60/options.qps))
+        | "Trigger" >> PeriodicImpulse(start_timestamp=time.time(), fire_interval=(60/args.qps))
         | "Generate Events" >> beam.ParDo(EventGenerator())
         | "JSONIFY" >> beam.Map(to_json)
-        | "Write to PubSub" >> beam.io.WriteToPubSub(options.topic)
+        | "Write to PubSub" >> beam.io.WriteToPubSub(args.topic)
     )
     return pipeline.run()
-
-# if __name__ == '__main__':
-#     logging.getLogger().setLevel(logging.INFO)
-#     options = StreamingPipelinOptions()
-#     options.view_as(beam.options.pipeline_options.SetupOptions).save_main_session = True
-#     run(options)
