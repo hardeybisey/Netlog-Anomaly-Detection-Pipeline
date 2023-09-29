@@ -61,9 +61,5 @@
     {
       "name": "avg_duration", 
       "type": "FLOAT"
-    }, 
-    {
-      "name": "centroid_id", 
-      "type": "INTEGER"
     }
   ]

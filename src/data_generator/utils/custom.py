@@ -27,7 +27,7 @@ class NetworkPool:
         return random.choice(self._ip)
      
     def _port(self):
-        return self._client.port_number("system")
+        return random.randint(1000, 5000)
     
     def _protocol_info(self):
         return random.choice(self._protocols)
@@ -50,39 +50,36 @@ class UserObject:
         return self.client.ipv4()
     
     def _port(self):
-        return self.client.port_number("user")
+        return random.randint(1000, 5000)
     
     def get_user(self):
         return User(self._subscriber_id(), self._ipv4(), self._port())
-
+    
 class JsonEvent:
     max_request_bytes = 5000
     allowed_lag_sec = 10
+    tcp_flag = ["SYN", "ACK", "FIN", "RST", "PSH", "URG"]
     
     @classmethod
-    def generate(cls, user, network):
+    def generate(cls, user, network, anomaly):
         start_time = datetime.now()
         time_diff = random.uniform(0, cls.allowed_lag_sec)
         end_time = start_time + timedelta(seconds=time_diff)
-        return {"subscriber_id": user.subscriber_id,
-                "src_ip": user.ipv4,
-                "src_port": user.port,
-                "dest_ip": network.ipv4,
-                "dst_port": network.port,
-                "tx_bytes": cls._normalized_bytes(time_diff),
-                "rx_bytes": cls._normalized_bytes(time_diff),
-                "start_time": start_time.isoformat(),
-                "end_time": end_time.isoformat(),
-                "protocol_name": network.protocol_name,
-                "protocol_num": network.protocol_num}
+        return {"subscriberId": user.subscriber_id,
+                "srcIP": user.ipv4,
+                "srcPort": user.port,
+                "dstIP": network.ipv4,
+                "dstPort": network.port,
+                "txBytes": cls._normalized_bytes(time_diff, anomaly),
+                "rxBytes": cls._normalized_bytes(time_diff, anomaly),
+                "startTime": start_time.isoformat(),
+                "endTime": end_time.isoformat(),
+                "tcpFlag": random.choice(cls.tcp_flag),
+                "protocolName": network.protocol_name,
+                "protocolNumber": network.protocol_num}
         
     @classmethod
-    def _normalized_bytes(cls, lag_time):
+    def _normalized_bytes(cls, lag_time, anomaly):
         random_byte = random.uniform(10, 100)
-        normalized_byte = random_byte * lag_time
-        return int(min(normalized_byte, cls.max_request_bytes))
-    
-    
-    
-    
-# python3 pipeline.py --streaming --autoscaling_algorithm NONE --num_workers 1 --max_num_workers 1 --enable_streaming_engine True --project "${PROJECT_ID}" --topic "projects/${PROJECT_ID}/topics/test" --qps 10 --runner "DataflowRunner" --region europe-west2 temp_location gs://${BUCKET}/temp staging_location gs://${BUCKET}/staging    
+        normalized_byte = int(min((random_byte * lag_time), cls.max_request_bytes))
+        return normalized_byte if not anomaly else normalized_byte * 10

@@ -58,10 +58,9 @@ These strategies collectively eliminate randomness from the data generation proc
 
 
 <!-- 1) gcloud auth configure-docker -->
-
-
-gcloud builds submit . --config cloud-build.yaml
-export _REGION="EU"
-export PROJECT_ID=electric-armor-395015
-export BUCKET=my_terraform_state_bucket
-gcloud dataflow flex-template run
+1) enable api's
+2) create cloud storage, bucket, topic, subcription 
+3) start the data generator pipeline
+4) start the model training pipeline
+5) start the anomaly detection pipeline
+6) start the anaomaly data generator pipeline

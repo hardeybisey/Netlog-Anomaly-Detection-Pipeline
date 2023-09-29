@@ -15,6 +15,13 @@
             "helpText": "Number of users per second to simulate",
             "description": "Number of users per second to simulate",
             "isOptional": false            
+        },
+        {
+            "name": "anomaly",
+            "label": "anomaly",
+            "helpText": "This is a boolean which controls if the simulation should generate anomalies",
+            "description": "This is a boolean which controls if the simulation should generate anomalies",
+            "isOptional": false
         }
     ]    
 }

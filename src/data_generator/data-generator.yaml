@@ -20,16 +20,16 @@ steps:
       - run
       - netlog-stream-job
       - '--template-file-gcs-location=gs://${_BUCKET}/templates/netlog-stream.json'
-      - '--max-workers=1'
+      - '--max-workers=2'
       - '--region=europe-west1'
       - '--worker-machine-type=n1-standard-1'
       - '--enable-streaming-engine'
-      - '--parameters=topic=projects/${PROJECT_ID}/topics/${_TOPIC_NAME},qps=100'
+      - '--parameters=topic=projects/${PROJECT_ID}/topics/${_TOPIC_NAME},qps=100,sdk_container_image=gcr.io/${PROJECT_ID}/netlog-stream-template:v1,sdk_location=container'
 images:
 - 'gcr.io/${PROJECT_ID}/netlog-stream-template:v1'
 substitutions:
-  _TOPIC_NAME: test
-  _BUCKET: test12345677
+  _TOPIC_NAME: netlog-stream
+  _BUCKET: ${PROJECT_ID}-netlog-stream
 
 # gcloud builds submit . --config data-generator.yaml --substitutions _BUCKET=test12345677
 

@@ -1,0 +1,8 @@
+steps:
+  - name: gcr.io/cloud-builders/gcloud
+    args: ['dataflow', 'flex-template', 'run', 'netlog-stream-job', '--template-file-gcs-location=gs://${_BUCKET}/templates/netlog-stream.json', '--max-workers=2', '--region=europe-west1', '--worker-machine-type=n1-standard-1', 
+          '--enable-streaming-engine', '--parameters=topic=projects/${PROJECT_ID}/topics/${_TOPIC_NAME},qps=1000,anomaly=True,sdk_container_image=gcr.io/${PROJECT_ID}/netlog-stream-template:v1,sdk_location=container']
+substitutions:
+  _TOPIC_NAME: netlog-stream
+  _BUCKET: ${PROJECT_ID}-netlog-bucket
+  

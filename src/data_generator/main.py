@@ -11,6 +11,10 @@ if __name__ == '__main__':
     parser.add_argument(
         '--qps',type=int,
         help='the qps to generate events at',required=True)
+    
+    parser.add_argument(
+        '--anomaly',type=bool,
+        help='whether to generate anomalies',required=True)
 
     args, beam_args = parser.parse_known_args()
     logging.getLogger().setLevel(logging.INFO)

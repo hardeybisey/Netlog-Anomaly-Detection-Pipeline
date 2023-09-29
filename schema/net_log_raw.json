@@ -37,12 +37,12 @@
       "type": "DATETIME"
     },
     {
-      "name":"timeStamp",
-      "type":"DATETIME" 
-    },
-    {
       "name": "tcpFlag",
       "type": "INTEGER"
+    },
+    {
+      "name":"timeStamp",
+      "type":"DATETIME" 
     },
     {
       "name": "protocolName",
@@ -51,21 +51,5 @@
     {
       "name": "protocolNumber",
       "type": "INTEGER"
-    },
-    {
-      "name": "geoCountry",
-      "type": "STRING"
-    },
-    {
-      "name": "geoCity",
-      "type": "STRING"
-    },
-    {
-      "name": "latitude",
-      "type": "FLOAT"
-    },
-    {
-      "name": "longitude",
-      "type": "FLOAT"
     }
   ]
