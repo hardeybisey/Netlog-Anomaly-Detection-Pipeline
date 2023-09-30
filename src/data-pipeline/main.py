@@ -5,8 +5,8 @@ from pipeline.netlog_streaming import run
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
-                '--topic', type = str,
-                help='pubsub topic for the pipeline to publish to',required=True)
+        '--topic', type = str,
+        help='pubsub topic for the pipeline to publish to',required=True)
             
     parser.add_argument(
         '--qps',type=int,

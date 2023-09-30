@@ -1,65 +1,65 @@
 [
     {
       "mode": "REQUIRED", 
-      "name": "transaction_time", 
+      "name": "ProcessingTime", 
       "type": "STRING"
     }, 
     {
       "mode": "REQUIRED", 
-      "name": "subscriber_id", 
+      "name": "subscriberId", 
       "type": "STRING"
     }, 
     {
       "mode": "REQUIRED", 
-      "name": "dst_subnet", 
+      "name": "dstIP", 
       "type": "STRING"
     }, 
     {
-      "name": "number_of_unique_ips", 
+      "name": "UniqueIPs", 
       "type": "INTEGER"
     }, 
     {
-      "name": "number_of_unique_ports", 
+      "name": "UniquePorts", 
       "type": "INTEGER"
     }, 
     {
-      "name": "number_of_records", 
+      "name": "Records", 
       "type": "INTEGER"
     }, 
     {
-      "name": "max_tx_bytes", 
+      "name": "MinTxBytes", 
       "type": "INTEGER"
     }, 
     {
-      "name": "min_tx_bytes", 
+      "name": "MaxTxBytes", 
       "type": "INTEGER"
     }, 
     {
-      "name": "avg_tx_bytes", 
+      "name": "AvgTxBytes", 
       "type": "FLOAT"
     }, 
     {
-      "name": "max_rx_bytes", 
+      "name": "MinRxBytes", 
       "type": "INTEGER"
     }, 
     {
-      "name": "min_rx_bytes", 
+      "name": "MaxRxBytes", 
       "type": "INTEGER"
     }, 
     {
-      "name": "avg_rx_bytes", 
+      "name": "AvgRxBytes", 
       "type": "FLOAT"
     }, 
     {
-      "name": "max_duration", 
+      "name": "MinDuration", 
       "type": "INTEGER"
     }, 
     {
-      "name": "min_duration", 
+      "name": "MaxDuration", 
       "type": "INTEGER"
     }, 
     {
-      "name": "avg_duration", 
+      "name": "AvgDuration", 
       "type": "FLOAT"
     }
   ]
