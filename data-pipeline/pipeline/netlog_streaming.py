@@ -11,7 +11,8 @@ from apache_beam.options.pipeline_options import PipelineOptions
 logger = logging.getLogger(__name__)
 
 class EventGenerator(beam.DoFn):
-    def __init__(self, anomaly, max_events_per_session=20):
+    def __init__(self, anomaly, max_events_per_session=20, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.max_events_per_session = max_events_per_session
         self.anomaly = anomaly
         self.network_pool = NetworkPool()
@@ -32,7 +33,7 @@ def to_json(event):
     return json.dumps(event).encode('utf-8')
 
 def run(args, beam_args):
-    options = PipelineOptions(beam_args, save_main_session=True, streaming=True)
+    options = PipelineOptions(beam_args, save_main_session=True, streaming=True, sdk_location='container')
     pipeline = beam.Pipeline(options=options)
     (
         pipeline

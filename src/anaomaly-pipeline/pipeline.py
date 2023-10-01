@@ -26,7 +26,7 @@ def ip_to_subnet(ip):
 
 pipe = beam.Pipeline()
 row = (pipe 
-        |"Read From Pub/Sub" >> beam.io.ReadFromPubSub(topic="", subscription="", with_attributes=True)
+        |"Read From Pub/Sub" >> beam.io.ReadFromPubSub(topic="projects/electric-armor-395015/topics/netlog-stream", subscription="projects/electric-armor-395015/subscriptions/netlog-stream-sub", with_attributes=True)
         |"Parse Event" >> beam.ParDo(EventParser()).with_outputs('valid', 'invalid').with_output_types(NetLogRawSchema))
 
 

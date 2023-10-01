@@ -22,8 +22,12 @@ steps:
   - name: gcr.io/cloud-builders/gcloud
     args: [ 'dataflow', 'flex-template', 'build', 'gs://${_BUCKET}/templates/netlog-stream.json', '--project=${PROJECT_ID}', '--image=gcr.io/${PROJECT_ID}/netlog-stream-template:${_TAG}', '--sdk-language=PYTHON', '--metadata-file=src/data-pipeline/metadata.json'] 
   - name: gcr.io/cloud-builders/gcloud
-    args: ['dataflow', 'flex-template', 'run', 'netlog-stream-job', '--template-file-gcs-location=gs://${_BUCKET}/templates/netlog-stream.json', '--max-workers=5', '--region=europe-west2', '--worker-machine-type=n1-standard-1', 
-          '--enable-streaming-engine', '--parameters=topic=projects/${PROJECT_ID}/topics/${_TOPIC_NAME},qps=10000,anomaly=False,sdk_container_image=gcr.io/${PROJECT_ID}/netlog-stream-template:${_TAG}']
+    args: ['dataflow', 'flex-template', 'run', 'netlog-stream-job2', '--template-file-gcs-location=gs://${_BUCKET}/templates/netlog-stream.json','--region=europe-west1', '--worker-machine-type=n1-standard-4','--parameters=topic=projects/${PROJECT_ID}/topics/${_TOPIC_NAME},qps=10000,anomaly=False']
+
+# ,sdk_container_image=gcr.io/${PROJECT_ID}/netlog-stream-template:${_TAG}'
+# ,'--num-workers=1', '--max-workers=1'
+# '--enable-streaming-engine'
+# --autoscalingAlgorithm=NONE --workerMachineType=n1-standard-4 --numWorkers=1 --maxNumWorkers=1
 images:
 - 'gcr.io/${PROJECT_ID}/netlog-stream-template:${_TAG}'
 # substitutions:
@@ -38,4 +42,4 @@ images:
 # gcloud pubsub subscriptions pull ${SUBSCRIPTION_ID} --auto-ack --limit=2
 
 
-# python src/data-pipeline/main.py --topic projects/electric-armor-395015/topics/${TOPIC_NAME} --qps 100 --anomaly True --runner DataFlowRunner --sdk_container_image gcr.io/electric-armor-395015/netlog-stream-template:${TAG} --project electric-armor-395015 --region europe-west2 --temp_location gs://${BUCKET}/tmp --staging_location gs://${BUCKET}/staging --job_name netlog-stream-job --max_num_workers 1 --worker_machine_type n1-standard-1
+# python test.py  --project electric-armor-395015 --region europe-west1 --temp_location gs://${BUCKET}/tmp --staging_location gs://${BUCKET}/staging --job_name aggregate-data --max_num_workers 1 --worker_machine_type n1-standard-4
