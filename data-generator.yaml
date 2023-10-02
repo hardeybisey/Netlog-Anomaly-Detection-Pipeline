@@ -36,3 +36,6 @@ substitutions:
 # docker pull gcr.io/${PROJECT_ID}/netlog-stream-template:v1
 
 # gcloud pubsub subscriptions pull test-sub --auto-ack --limit=2
+
+
+# gcloud pubsub subscriptions pull projects/electric-armor-395015/subscriptions/netlog-stream-sub --auto-ack --limit=2
