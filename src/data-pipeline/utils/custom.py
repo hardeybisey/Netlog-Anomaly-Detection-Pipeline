@@ -25,7 +25,7 @@ class NetworkPool:
         
     def _ipv4(self):
         return random.choice(self._ip)
-     
+
     def _port(self):
         return random.randint(1000, 5000)
     

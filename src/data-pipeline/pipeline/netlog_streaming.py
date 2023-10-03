@@ -14,10 +14,10 @@ class EventGenerator(beam.DoFn):
     def __init__(self, anomaly, max_events_per_session=20):
         self.max_events_per_session = max_events_per_session
         self.anomaly = anomaly
-        self.network_pool = NetworkPool()
     
     def setup(self):
         self.user_obj = UserObject()    
+        self.network_pool = NetworkPool()  
 
     def process(self, element):
         network = self.network_pool.get_network()
