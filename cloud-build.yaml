@@ -13,18 +13,18 @@ steps:
   #   args: ['mk', '-t', '--schema','schema/net_log_agg.json',  '--time_partitioning_type=DAY', '--clustering_fields=dstIP,subscriberId', '${PROJECT_ID}:${_DATASET_ID}.features']
   # - name: gcr.io/cloud-builders/gcloud
   #   entrypoint: 'bq'
-  #   args: ['mk', '-t', '--schema','schema/net_log_raw.json',  '--time_partitioning_type=DAY', '--clustering_fields=dstIP,subscriberId', '${PROJECT_ID}:${_DATASET_ID}.logs']
+    # args: ['mk', '-t', '--schema','schema/net_log_raw.json',  '--time_partitioning_type=DAY', '--clustering_fields=dstIP,subscriberId', '${PROJECT_ID}:${_DATASET_ID}.logs']
   # - name: gcr.io/cloud-builders/gcloud
   #   entrypoint: 'bq'
   #   args: ['mk', '-t', '--schema','schema/net_log_outlier.json',  '--time_partitioning_type=DAY', '--clustering_fields=dstIP,subscriberId', '${PROJECT_ID}:${_DATASET_ID}.anomalies']
-  # - name: gcr.io/cloud-builders/docker
-  #   args: ['build', '-t', 'gcr.io/${PROJECT_ID}/netlog-stream-template:${_TAG}', 'src/data-pipeline/.']
-  # - name: gcr.io/cloud-builders/gcloud
-  #   args: [ 'dataflow', 'flex-template', 'build', 'gs://${_BUCKET}/templates/netlog-stream.json', '--project=${PROJECT_ID}', '--image=gcr.io/${PROJECT_ID}/netlog-stream-template:${_TAG}', '--sdk-language=PYTHON', '--metadata-file=src/data-pipeline/metadata.json'] 
+  - name: gcr.io/cloud-builders/docker
+    args: ['build', '-t', 'gcr.io/${PROJECT_ID}/netlog-stream-template:${_TAG}', 'src/data-pipeline/.']
   - name: gcr.io/cloud-builders/gcloud
-    args: ['dataflow', 'flex-template', 'run', 'netlog-stream-job', '--template-file-gcs-location=gs://${_BUCKET}/templates/netlog-stream.json','--region=europe-west2', '--worker-machine-type=n1-standard-4','--num-workers=1','--max-workers=5','--parameters=topic=projects/${PROJECT_ID}/topics/${_TOPIC_NAME},qps=10000,anomaly=False']
-# images:
-# - 'gcr.io/${PROJECT_ID}/netlog-stream-template:${_TAG}'
+    args: [ 'dataflow', 'flex-template', 'build', 'gs://${_BUCKET}/templates/netlog-stream.json', '--project=${PROJECT_ID}', '--image=gcr.io/${PROJECT_ID}/netlog-stream-template:${_TAG}', '--sdk-language=PYTHON', '--metadata-file=src/data-pipeline/metadata.json'] 
+  - name: gcr.io/cloud-builders/gcloud
+    args: ['dataflow', 'flex-template', 'run', 'netlog-stream-job', '--template-file-gcs-location=gs://${_BUCKET}/templates/netlog-stream.json','--region=europe-west2', '--worker-machine-type=n1-standard-4','--num-workers=1','--max-workers=5','--parameters=topic=projects/${PROJECT_ID}/topics/${_TOPIC_NAME},qps=10000,event_type=normal']
+images:
+- 'gcr.io/${PROJECT_ID}/netlog-stream-template:${_TAG}'
 # substitutions:
 #   _TAG: $(date +%Y%m%d%H%M%S)
 #   _TOPIC_NAME: netlog-stream
@@ -42,4 +42,4 @@ steps:
 # gcloud pubsub subscriptions pull ${SUBSCRIPTION_ID} --auto-ack --limit=2
 
 # gcloud builds submit . --config cloud-build.yaml  --substitutions _TOPIC_NAME=${TOPIC_NAME},_BUCKET=${BUCKET},_TAG=${TAG}
-# python test.py  --project electric-armor-395015 --region europe-west2 --temp_location gs://${BUCKET}/tmp --staging_location gs://${BUCKET}/staging --job_name aggregate-data --max_num_workers 1 --worker_machine_type n1-standard-4 --runner DataflowRunner
+# python test.py  --project electric-armor-395015 --region europe-west2 --temp_location gs://${BUCKET}/tmp --staging_location gs://${BUCKET}/staging --job_name aggregate-data --max_num_workers 1 --worker_machine_type n1-standard-4 --runner DataflowRunner 
