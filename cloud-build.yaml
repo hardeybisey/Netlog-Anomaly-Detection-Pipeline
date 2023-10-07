@@ -1,45 +1,27 @@
 steps:
-  # - name: gcr.io/cloud-builders/gsutil
-  #   args: ['mb', '-c', 'standard', '-l','europe-west1', 'gs://${_BUCKET}']
-  # - name: gcr.io/cloud-builders/gcloud
-  #   args: ['pubsub', 'topics', 'create', '${_TOPIC_NAME}']
-  # - name: gcr.io/cloud-builders/gcloud
-  #   args: ['pubsub', 'subscriptions', 'create', '${_SUBSCRIPTION_ID}', '--topic', '${_TOPIC_NAME}']
-  # - name: gcr.io/cloud-builders/gcloud
-  #   entrypoint: 'bq'
-  #   args: ['mk', '-d', '--description', 'Network Flow Log Dataset', '--location=EU', '${_DATASET_ID}']
-  # - name: gcr.io/cloud-builders/gcloud
-  #   entrypoint: 'bq'
-  #   args: ['mk', '-t', '--schema','schema/net_log_agg.json',  '--time_partitioning_type=DAY', '--clustering_fields=dstIP,subscriberId', '${PROJECT_ID}:${_DATASET_ID}.features']
-  # - name: gcr.io/cloud-builders/gcloud
-  #   entrypoint: 'bq'
-    # args: ['mk', '-t', '--schema','schema/net_log_raw.json',  '--time_partitioning_type=DAY', '--clustering_fields=dstIP,subscriberId', '${PROJECT_ID}:${_DATASET_ID}.logs']
-  # - name: gcr.io/cloud-builders/gcloud
-  #   entrypoint: 'bq'
-  #   args: ['mk', '-t', '--schema','schema/net_log_outlier.json',  '--time_partitioning_type=DAY', '--clustering_fields=dstIP,subscriberId', '${PROJECT_ID}:${_DATASET_ID}.anomalies']
+  - name: gcr.io/cloud-builders/gsutil
+    args: ['mb', '-c', 'standard', '-l','europe-west1', 'gs://${_BUCKET}']
+  - name: gcr.io/cloud-builders/gcloud
+    args: ['pubsub', 'topics', 'create', '${_TOPIC_NAME}']
+  - name: gcr.io/cloud-builders/gcloud
+    args: ['pubsub', 'subscriptions', 'create', '${_SUBSCRIPTION_ID}', '--topic', '${_TOPIC_NAME}']
+  - name: gcr.io/cloud-builders/gcloud
+    entrypoint: 'bq'
+    args: ['mk', '-d', '--description', 'Network Flow Log Dataset', '--location=EU', '${_DATASET_ID}']
+  - name: gcr.io/cloud-builders/gcloud
+    entrypoint: 'bq'
+    args: ['mk', '-t', '--schema','schema/net_log_agg.json',  '--time_partitioning_type=DAY', '--clustering_fields=dstIP,subscriberId', '${PROJECT_ID}:${_DATASET_ID}.features']
+  - name: gcr.io/cloud-builders/gcloud
+    entrypoint: 'bq'
+    args: ['mk', '-t', '--schema','schema/net_log_raw.json',  '--time_partitioning_type=DAY', '--clustering_fields=dstIP,subscriberId', '${PROJECT_ID}:${_DATASET_ID}.logs']
+  - name: gcr.io/cloud-builders/gcloud
+    entrypoint: 'bq'
+    args: ['mk', '-t', '--schema','schema/net_log_outlier.json',  '--time_partitioning_type=DAY', '--clustering_fields=dstIP,subscriberId', '${PROJECT_ID}:${_DATASET_ID}.anomalies']
   - name: gcr.io/cloud-builders/docker
     args: ['build', '-t', 'gcr.io/${PROJECT_ID}/netlog-stream-template:${_TAG}', 'src/data-pipeline/.']
   - name: gcr.io/cloud-builders/gcloud
     args: [ 'dataflow', 'flex-template', 'build', 'gs://${_BUCKET}/templates/netlog-stream.json', '--project=${PROJECT_ID}', '--image=gcr.io/${PROJECT_ID}/netlog-stream-template:${_TAG}', '--sdk-language=PYTHON', '--metadata-file=src/data-pipeline/metadata.json'] 
   - name: gcr.io/cloud-builders/gcloud
-    args: ['dataflow', 'flex-template', 'run', 'netlog-stream-job', '--template-file-gcs-location=gs://${_BUCKET}/templates/netlog-stream.json','--region=europe-west2', '--worker-machine-type=n1-standard-4','--num-workers=1','--max-workers=5','--parameters=topic=projects/${PROJECT_ID}/topics/${_TOPIC_NAME},qps=10000,event_type=normal']
+    args: ['dataflow', 'flex-template', 'run', 'netlog-stream-job', '--template-file-gcs-location=gs://${_BUCKET}/templates/netlog-stream.json','--region=europe-west2', '--worker-machine-type=n1-standard-4','--num-workers=1','--max-workers=5','--parameters=topic=projects/${PROJECT_ID}/topics/${_TOPIC_NAME},qps=10000,event_type=${_EVENT_TYPE}']
 images:
 - 'gcr.io/${PROJECT_ID}/netlog-stream-template:${_TAG}'
-# substitutions:
-#   _TAG: $(date +%Y%m%d%H%M%S)
-#   _TOPIC_NAME: netlog-stream
-#   _SUBSCRIPTION_ID: netlog-stream-sub
-#   _DATASET_ID: netlog_dataset
-#   _BUCKET: ${PROJECT_ID}-netlog-stream
-
-
-# export TOPIC_NAME="netlog-stream"
-# export SUBSCRIPTION_ID="netlog-stream-sub"
-# export DATASET_ID="netlog_dataset"
-# export BUCKET="$(gcloud config get-value project -q)-netlog-bucket"
-# export TAG="$(date +%Y%m%d%H%M%S)"
-# gcloud builds submit . --config cloud-build.yaml  --substitutions _TOPIC_NAME=${TOPIC_NAME},_SUBSCRIPTION_ID=${SUBSCRIPTION_ID},_DATASET_ID=${DATASET_ID},_BUCKET=${BUCKET},_TAG=${TAG}
-# gcloud pubsub subscriptions pull ${SUBSCRIPTION_ID} --auto-ack --limit=2
-
-# gcloud builds submit . --config cloud-build.yaml  --substitutions _TOPIC_NAME=${TOPIC_NAME},_BUCKET=${BUCKET},_TAG=${TAG}
-# python test.py  --project electric-armor-395015 --region europe-west2 --temp_location gs://${BUCKET}/tmp --staging_location gs://${BUCKET}/staging --job_name aggregate-data --max_num_workers 1 --worker_machine_type n1-standard-4 --runner DataflowRunner 
