@@ -58,6 +58,12 @@ These strategies collectively eliminate randomness from the data generation proc
 
 [![Open in Cloud Shell](http://gstatic.com/cloudssh/images/open-btn.svg)](https://console.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https://github.com/GoogleCloudPlatform/df-ml-anomaly-detection.git)
 
+
+## Clone The Repo
+```
+git clone https://github.com/hardeybisey/Netlog-Anomaly-Detection-Pipeline.git
+```
+
 ### Enable APIs
 
 ```
