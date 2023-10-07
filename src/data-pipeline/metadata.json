@@ -17,10 +17,10 @@
             "isOptional": false            
         },
         {
-            "name": "anomaly",
-            "label": "anomaly",
-            "helpText": "This is a boolean which controls if the simulation should generate anomalies",
-            "description": "This is a boolean which controls if the simulation should generate anomalies",
+            "name": "event_type",
+            "label": "event_type",
+            "helpText": "Possible values: normal, anomaly.",
+            "description": "This controls if the simulation should generate anomalies or normal events.",
             "isOptional": false
         }
     ]    

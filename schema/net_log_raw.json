@@ -41,10 +41,6 @@
       "type": "INTEGER"
     },
     {
-      "name":"timeStamp",
-      "type":"DATETIME" 
-    },
-    {
       "name": "protocolName",
       "type": "STRING"
     },

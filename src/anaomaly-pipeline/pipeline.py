@@ -3,13 +3,12 @@ import time
 import logging
 import apache_beam as beam
 from datetime import datetime
-from utils import NetLogRawSchema, NetLogAggSchema, UniqueCombine, JsonTOBeamRow
+from utils import NetLogRawSchema, NetLogAggSchema, UniqueCombine, JsonToBeamRow
 
 class EventParser(beam.DoFn):
-    def process(self, element, timestamp=beam.DoFn.TimestampParam):
+    def process(self, element):
         try:
             event = json.loads(element.decode('utf-8'))
-            element['timeStamp'] = timestamp.to_utc_datetime().isoformat()
             yield beam.pvalue.TaggedOutput('valid', NetLogRawSchema(**event))
         except:
             yield beam.pvalue.TaggedOutput('invalid', element.decode('utf-8'))
@@ -18,20 +17,20 @@ class AddProcessingTime(beam.DoFn):
     def process(self, element):
         element = element._asdict()
         element['ProcessingTime'] = datetime.now().isoformat()
-        yield element
+        yield dict(element)
 
-def ip_to_subnet(ip):
-    return '.'.join(ip.split('.')[:3]) + '.0/24'
-
-
-pipe = beam.Pipeline()
-row = (pipe 
-        |"Read From Pub/Sub" >> beam.io.ReadFromPubSub(topic="projects/electric-armor-395015/topics/netlog-stream", subscription="projects/electric-armor-395015/subscriptions/netlog-stream-sub", with_attributes=True)
+pipeline = beam.Pipeline()
+row = (pipeline 
+        |"Read From Pub/Sub" >> beam.io.ReadFromPubSub(topic="projects/electric-armor-395015/topics/netlog-stream")
         |"Parse Event" >> beam.ParDo(EventParser()).with_outputs('valid', 'invalid').with_output_types(NetLogRawSchema))
 
 
 features = (row.valid
-            |"Convert To Row" >> beam.ParDo(JsonTOBeamRow()) 
+            |"Convert To Row" >> beam.ParDo(JsonToBeamRow()) 
+            | "Fixed Window" >> beam.WindowInto(beam.window.FixedWindows(60),
+                                          allowed_lateness=beam.window.Duration(seconds=0),
+                                          trigger = beam.trigger.AfterWatermark(),
+                                          accumulation_mode=beam.trigger.AccumulationMode.DISCARDING)
             |"Aggregate Row" >> beam.GroupBy("subscriberId","dstIP")
                                     .aggregate_field("srcIP", UniqueCombine(), "UniqueIPs")
                                     .aggregate_field("srcPort", UniqueCombine(), "UniquePorts")
@@ -45,35 +44,32 @@ features = (row.valid
                                     .aggregate_field("duration", min, "MinDuration")
                                     .aggregate_field("duration", max, "MaxDuration")
                                     .aggregate_field("duration", beam.combiners.MeanCombineFn(), "AvgDuration")
-            |"Add Timestamp Value" >> beam.ParDo(AddProcessingTime()).with_output_types(NetLogAggSchema)
-            )
+            |"Add Timestamp Value" >> beam.ParDo(AddProcessingTime()).with_output_types(NetLogAggSchema))
+
+deadletters = (
+    row.invalid 
+    | "Batch Invalid Elements " >> beam.WindowInto(beam.window.FixedWindows(120),
+                                                   trigger=beam.trigger.AfterProcessingTime(120),
+                                                   accumulation_mode=beam.trigger.AccumulationMode.DISCARDING)
+    | "Write Invalid Elements to BQ" >> beam.io.WriteToBigQuery(table="table_id",
+                                                                schema="table_schema",
+                                                                write_disposition=beam.io.BigQueryDisposition.WRITE_APPEND,
+                                                                create_disposition=beam.io.BigQueryDisposition.CREATE_NEVER)
+    )
 
 predict_anomaly = (
     features
-    | 'predict_anomaly' >> beam.ParDo(PredictAnomaly()).with_output_types(NetLogAggSchema)
-    |  "write Anomaly to BQ" >> beam.io.WriteToBigQuery(
-        table="table_id",
-        schema="table_schema",
-        write_disposition=beam.io.BigQueryDisposition.WRITE_APPEND,
-        create_disposition=beam.io.BigQueryDisposition.CREATE_NEVER
-        )
+    | 'predict_anomaly' >> beam.ParDo(PredictAnomaly("")).with_output_types(NetLogAggSchema)
+    |  "write Anomaly to BQ" >> beam.io.WriteToBigQuery(table="table_id",
+                                                        schema="table_schema",
+                                                        write_disposition=beam.io.BigQueryDisposition.WRITE_APPEND,
+                                                        create_disposition=beam.io.BigQueryDisposition.CREATE_NEVER)
     )
-
-
-deadletters = (
-    row.invalid | beam.io.WriteToBigQuery(
-        table="table_id",
-        schema="table_schema",
-        write_disposition=beam.io.BigQueryDisposition.WRITE_APPEND,
-        create_disposition=beam.io.BigQueryDisposition.CREATE_NEVER
-        )
-)
     
 write_to_feature_store = (
-    features |"Write Features to BQ" >>beam.io.WriteToBigQuery(
-        table="table_id",
-        schema="table_schema",
-        write_disposition=beam.io.BigQueryDisposition.WRITE_APPEND,
-        create_disposition=beam.io.BigQueryDisposition.CREATE_NEVER
+    features 
+    |"Write Features to BQ" >>beam.io.WriteToBigQuery(table="table_id",                              
+                                                    schema="table_schema",
+                                                    write_disposition=beam.io.BigQueryDisposition.WRITE_APPEND,
+                                                    create_disposition=beam.io.BigQueryDisposition.CREATE_NEVER)
     )
-)

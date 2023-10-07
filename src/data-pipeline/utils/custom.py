@@ -61,7 +61,7 @@ class JsonEvent:
     tcp_flag = ["SYN", "ACK", "FIN", "RST", "PSH", "URG"]
     
     @classmethod
-    def generate(cls, user, network, anomaly):
+    def generate(cls, user, network, event_type):
         start_time = datetime.now()
         time_diff = random.uniform(0, cls.allowed_lag_sec)
         end_time = start_time + timedelta(seconds=time_diff)
@@ -70,8 +70,8 @@ class JsonEvent:
                 "srcPort": user.port,
                 "dstIP": network.ipv4,
                 "dstPort": network.port,
-                "txBytes": cls._normalized_bytes(time_diff, anomaly),
-                "rxBytes": cls._normalized_bytes(time_diff, anomaly),
+                "txBytes": cls._normalized_bytes(time_diff, event_type),
+                "rxBytes": cls._normalized_bytes(time_diff, event_type),
                 "startTime": start_time.isoformat(),
                 "endTime": end_time.isoformat(),
                 "tcpFlag": random.choice(cls.tcp_flag),
@@ -79,7 +79,7 @@ class JsonEvent:
                 "protocolNumber": network.protocol_num}
         
     @classmethod
-    def _normalized_bytes(cls, lag_time, anomaly):
+    def _normalized_bytes(cls, lag_time, event_type):
         random_byte = random.uniform(10, 100)
         normalized_byte = int(min((random_byte * lag_time), cls.max_request_bytes))
-        return normalized_byte if not anomaly else normalized_byte * 10
+        return normalized_byte if event_type == "normal" else (normalized_byte * 20)

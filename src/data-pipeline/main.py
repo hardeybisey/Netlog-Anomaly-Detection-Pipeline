@@ -1,5 +1,4 @@
 import argparse
-import logging
 from pipeline.netlog_streaming import run
 
 if __name__ == '__main__':
@@ -13,10 +12,8 @@ if __name__ == '__main__':
         help='the qps to generate events at',required=True)
     
     parser.add_argument(
-        '--anomaly',type=bool,
-        help='whether to generate anomalies',required=True)
+        '--event_type',type=str,
+        help='type of event to generate',required=True)
 
     args, beam_args = parser.parse_known_args()
-    logging.getLogger().setLevel(logging.INFO)
-    logging.info("Starting Pipeline ...")
     run(args, beam_args)
