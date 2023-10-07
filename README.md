@@ -89,13 +89,6 @@ export EVENT_TYPE="normal"
 #### Trigger Cloud Build Script
 
 ```
-# gcloud builds submit . --config cloud-build.yaml  --substitutions \
-_TOPIC_NAME=${TOPIC_NAME},\
-_SUBSCRIPTION_ID=${SUBSCRIPTION_ID},\
-_DATASET_ID=${DATASET_ID},\
-_BUCKET=${BUCKET},\
-_TAG=${TAG},\
-_EVENT_TYPE=${EVENT_TYPE}
-
-<!-- 1) gcloud auth configure-docker -->
+gcloud builds submit . --config cloud-build.yaml  --substitutions _TOPIC_NAME=${TOPIC_NAME},_SUBSCRIPTION_ID=${SUBSCRIPTION_ID},_DATASET_ID=${DATASET_ID},_BUCKET=${BUCKET},_TAG=${TAG},_EVENT_TYPE=${EVENT_TYPE}
+```
 
