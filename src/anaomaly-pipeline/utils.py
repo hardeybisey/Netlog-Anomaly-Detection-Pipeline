@@ -1,8 +1,9 @@
 import typing
-import datetime
+import json
+from datetime import datetime
 import apache_beam as beam
 
-class ModelFeatures(typing.NamedTuple):
+class NetLogFeaturesSchema(typing.NamedTuple):
     subscriberId : str
     Records : int
     MinTxBytes: int
@@ -14,7 +15,6 @@ class ModelFeatures(typing.NamedTuple):
     MinDuration: float
     MaxDuration: float
     AvgDuration: float
-
 
 class NetLogRawSchema(typing.NamedTuple):
     subscriberId : str
@@ -36,7 +36,7 @@ class NetLogAggSchema(typing.NamedTuple):
     dstIP : str
     UniqueIPs : int
     UniquePorts : int
-    Records : int
+    NumRecords : int
     MinTxBytes: int
     MaxTxBytes: int
     AvgTxBytes: float
@@ -60,7 +60,21 @@ class UniqueCombine(beam.CombineFn):
     
     def extract_output(self, accumulator):
         return len(accumulator)
-    
+
+class EventParser(beam.DoFn):
+    def process(self, element):
+        try:
+            event = json.loads(element.decode('utf-8'))
+            yield beam.pvalue.TaggedOutput('valid', NetLogRawSchema(**event))
+        except:
+            yield beam.pvalue.TaggedOutput('invalid', element.decode('utf-8'))
+
+class AddProcessingTime(beam.DoFn):
+    def process(self, element):
+        element = element._asdict()
+        element['ProcessingTime'] = datetime.now().isoformat()
+        yield dict(element)
+            
 class JsonToBeamRow(beam.DoFn):
     def process(self, element):
         timefmt = "%Y-%m-%dT%H:%M:%S.%f"

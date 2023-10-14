@@ -1,12 +1,25 @@
 import json
 import time
-import logging
 import typing
-import datetime
+import google.auth
 import apache_beam as beam
-import argparse
 from datetime import datetime
-from apache_beam.options.pipeline_options import PipelineOptions
+from apache_beam.runners import DataflowRunner
+from apache_beam.options import pipeline_options
+from apache_beam.options.pipeline_options import GoogleCloudOptions, StandardOptions, SetupOptions
+
+class NetLogFeaturesSchema(typing.NamedTuple):
+    subscriberId : str
+    Records : int
+    MinTxBytes: int
+    MaxTxBytes: int
+    AvgTxBytes: float
+    MinRxBytes: int
+    MaxRxBytes: int
+    AvgRxBytes: float
+    MinDuration: float
+    MaxDuration: float
+    AvgDuration: float
 
 class NetLogRawSchema(typing.NamedTuple):
     subscriberId : str
@@ -18,7 +31,7 @@ class NetLogRawSchema(typing.NamedTuple):
     rxBytes : int
     startTime : datetime
     endTime : datetime
-    timeStamp : datetime
+    tcpFlag : str
     protocolName : str
     protocolNumber : int
 
@@ -28,7 +41,7 @@ class NetLogAggSchema(typing.NamedTuple):
     dstIP : str
     UniqueIPs : int
     UniquePorts : int
-    Records : int
+    NumRecords : int
     MinTxBytes: int
     MaxTxBytes: int
     AvgTxBytes: float
@@ -38,6 +51,18 @@ class NetLogAggSchema(typing.NamedTuple):
     MinDuration: float
     MaxDuration: float
     AvgDuration: float
+
+class NetLogRowSchema(typing.NamedTuple):
+    subscriberId: str
+    srcIP: str
+    srcPort: int
+    dstIP: str
+    dstPort: int
+    txBytes: int
+    rxBytes: int
+    startTime: datetime
+    endTime: datetime
+    duration: float
     
 class UniqueCombine(beam.CombineFn):
     def create_accumulator(self):
@@ -52,83 +77,114 @@ class UniqueCombine(beam.CombineFn):
     
     def extract_output(self, accumulator):
         return len(accumulator)
-    
-class JsonTOBeamRow(beam.DoFn):
-    def process(self, element):
-        timefmt = "%Y-%m-%dT%H:%M:%S.%f"
-        duration = datetime.strptime(element['endTime'],timefmt) - datetime.strptime(element['startTime'],timefmt)
-        yield beam.Row(
-            subscriberId=element['subscriberId'],
-            srcIP=element['srcIP'],
-            srcPort=element['srcPort'],
-            dstIP=element['dstIP'],
-            dstPort=element['dstPort'],
-            tx_bytes=element['txBytes'],
-            txBytes=element['rxBytes'],
-            startTime=element['startTime'],
-            endTime=element['endTime'],
-            duration=duration.total_seconds())
 
 class EventParser(beam.DoFn):
-    def process(self, element, timestamp=beam.DoFn.TimestampParam):
+    def process(self, element):
         try:
-            event = json.loads(element.decode('utf-8'))
-            element['timeStamp'] = timestamp.to_utc_datetime().isoformat()
-            yield beam.pvalue.TaggedOutput('valid', NetLogRawSchema(**event))
+            event = json.loads(element)
+            yield beam.pvalue.TaggedOutput('validjson', NetLogRawSchema(**event))
         except:
-            yield beam.pvalue.TaggedOutput('invalid', element.decode('utf-8'))
+            yield beam.pvalue.TaggedOutput('invalidjson', element)
 
+class AssignTimeStamp(beam.DoFn):
+    def process(self, element):
+        timefmt = "%Y-%m-%dT%H:%M:%S.%f"
+        timestamp = datetime.strptime(element.endTime, timefmt).timestamp()
+        yield beam.window.TimestampedValue(element, timestamp)
+        
 class AddProcessingTime(beam.DoFn):
     def process(self, element):
         element = element._asdict()
         element['ProcessingTime'] = datetime.now().isoformat()
-        yield element
+        yield dict(element)
+            
+class JsonToBeamRow(beam.DoFn):
+    def process(self, element):
+        try:
+            timefmt = "%Y-%m-%dT%H:%M:%S.%f"
+            duration = datetime.strptime(element.endTime, timefmt) - datetime.strptime(element.startTime, timefmt)
+            row = beam.Row(subscriberId=element.subscriberId,
+                            srcIP=element.srcIP,
+                            srcPort=element.srcPort,
+                            dstIP=element.dstIP,
+                            dstPort=element.dstPort,
+                            txBytes=element.txBytes,
+                            rxBytes=element.rxBytes,
+                            startTime=element.startTime,
+                            endTime=element.endTime,
+                            duration=duration.total_seconds())
+            yield beam.pvalue.TaggedOutput('validrow', row)
+        except:
+            yield beam.pvalue.TaggedOutput('invalidrow', element)
 
-parser = argparse.ArgumentParser()
-args, beam_args = parser.parse_known_args()
-options = PipelineOptions(beam_args, save_main_session=True, streaming=True)
-pipe = beam.Pipeline(options=options)
-row = (pipe 
-        |"Read From Pub/Sub" >> beam.io.ReadFromPubSub(topic="projects/electric-armor-395015/topics/netlog-stream",with_attributes=True)
-        |"Parse Event" >> beam.ParDo(EventParser()).with_outputs('valid', 'invalid').with_output_types(NetLogRawSchema))
+
+def netlog_feature_aggregation(bucket="gs://electric-armor-395015-netlog-bucket"):       
+    files = f"{bucket}/*/*.json"
+    valid_out_path = f"{bucket}/netlog_aggregate/"
+    invalid_out_path = f"{bucket}/netlog_badletters/"
+    file_name_suffix = ".json"
+
+    runner = DataflowRunner()
+    options = pipeline_options.PipelineOptions()
+    _, options.view_as(GoogleCloudOptions).project = google.auth.default()
+    options.view_as(SetupOptions).save_main_session = True
+    options.view_as(GoogleCloudOptions).region = 'europe-west1'
+    options.view_as(GoogleCloudOptions).job_name = 'netlog-model-test-job'+"-"+ str(datetime.now())
+    options.view_as(GoogleCloudOptions).staging_location = f'{bucket}/staging'
+    options.view_as(GoogleCloudOptions).temp_location = f'{bucket}/temp'
 
 
-features = (row.valid
-            |"Convert To Row" >> beam.ParDo(JsonTOBeamRow()) 
-            |"Aggregate Row" >> beam.GroupBy("subscriberId","dstIP")
-                                    .aggregate_field("srcIP", UniqueCombine(), "UniqueIPs")
-                                    .aggregate_field("srcPort", UniqueCombine(), "UniquePorts")
-                                    .aggregate_field("subscriberId", beam.combiners.CountCombineFn(),"Records")
-                                    .aggregate_field("txBytes", min ,"MinTxBytes")
-                                    .aggregate_field("txBytes", max ,"MaxTxBytes")
-                                    .aggregate_field("txBytes", beam.combiners.MeanCombineFn() ,"AvgTxBytes")
-                                    .aggregate_field("rxBytes", min,"MinRxBytes")
-                                    .aggregate_field("rxBytes", max,"MaxRxBytes")
-                                    .aggregate_field("rxBytes", beam.combiners.MeanCombineFn() ,"AvgRxBytes")
-                                    .aggregate_field("duration", min, "MinDuration")
-                                    .aggregate_field("duration", max, "MaxDuration")
-                                    .aggregate_field("duration", beam.combiners.MeanCombineFn(), "AvgDuration")
-            |"Add Timestamp Value" >> beam.ParDo(AddProcessingTime()).with_output_types(NetLogAggSchema)
-            )
-
-write_to_feature_store = (
-    features |"Write Features to BQ" >>beam.io.WriteToBigQuery(
-        table="electric-armor-395015.netlog_dataset.features",
-        schema="ProcessingTime:TIMESTAMP, subscriberId:STRING, dstIP:STRING, UniqueIPs:INTEGER, UniquePorts:INTEGER, Records:INTEGER, MinTxBytes:INTEGER, MaxTxBytes:INTEGER, AvgTxBytes:FLOAT, MinRxBytes:INTEGER, MaxRxBytes:INTEGER, AvgRxBytes:FLOAT, MinDuration:FLOAT, MaxDuration:FLOAT, AvgDuration:FLOAT",
-        write_disposition=beam.io.BigQueryDisposition.WRITE_APPEND,
-        create_disposition=beam.io.BigQueryDisposition.CREATE_NEVER
+    @beam.ptransform_fn
+    def GetFeaturesFromRow(pcoll):
+        return (
+            pcoll
+            |"With timestamps" >> beam.ParDo(AssignTimeStamp())
+            | "Fixed Window 1 Min" >> beam.WindowInto(beam.window.FixedWindows(120),
+                              allowed_lateness=beam.window.Duration(seconds=0),
+                              trigger = beam.trigger.AfterWatermark(),
+                              accumulation_mode=beam.trigger.AccumulationMode.DISCARDING)
+            | "Aggregate Row" >> beam.GroupBy("subscriberId","dstIP")
+                        .aggregate_field("srcIP", UniqueCombine(), "UniqueIPs")
+                        .aggregate_field("srcPort", UniqueCombine(), "UniquePorts")
+                        .aggregate_field("subscriberId", beam.combiners.CountCombineFn(),"Records")
+                        .aggregate_field("txBytes", min ,"MinTxBytes")
+                        .aggregate_field("txBytes", max ,"MaxTxBytes")
+                        .aggregate_field("txBytes", beam.combiners.MeanCombineFn() ,"AvgTxBytes")
+                        .aggregate_field("rxBytes", min,"MinRxBytes")
+                        .aggregate_field("rxBytes", max,"MaxRxBytes")
+                        .aggregate_field("rxBytes", beam.combiners.MeanCombineFn() ,"AvgRxBytes")
+                        .aggregate_field("duration", min, "MinDuration")
+                        .aggregate_field("duration", max, "MaxDuration")
+                        .aggregate_field("duration", beam.combiners.MeanCombineFn(), "AvgDuration")
+               )    
+            
+    pipeline =  beam.Pipeline()
+    json_rows = (
+        pipeline
+        |"Read From Text" >> beam.io.ReadFromText(files)
+        | "Parse Event" >> beam.ParDo(EventParser()).with_outputs('validjson', 'invalidjson').with_output_types(NetLogRawSchema)
     )
-)
 
-write_to_cloud_storage = (
-    row.valid 
-    | " Windowing" >> beam.WindowInto(beam.window.FixedWindows(600),
-                                      trigger=beam.trigger.AfterWatermark(late=beam.trigger.AfterCount(1)),
-                                      accumulation_mode=beam.trigger.AccumulationMode.DISCARDING)
-    |"Write to Cloud Storage" >> beam.io.WriteToText("gs://netlog-streaming-dataflow/bacth", file_name_suffix=".json")
+    beam_rows = (
+        json_rows.validjson
+        | "Convert To Row" >> beam.ParDo(JsonToBeamRow()).with_outputs('validrow', 'invalidrow').with_output_types(NetLogRowSchema)
     )
-if __name__ == "__main__":
-    pipe.run()
+
+
+    features = (
+        beam_rows.validrow
+        | "Get Features" >> GetFeaturesFromRow()
+        | "Add Processing Timestamp" >> beam.ParDo(AddProcessingTime()).with_output_types(NetLogAggSchema)
+        | "Write Features To Cloud Storage" >> beam.io.WriteToText(file_path_prefix=valid_out_path,file_name_suffix=file_name_suffix)
+    )
+
+    badletters =  (
+        (json_rows.invalidjson , beam_rows.invalidrow)
+        | "Flatten" >> beam.Flatten()
+        | 'Deduplicate elements' >> beam.Distinct()
+        | "Write Bad Letter To Cloud Storage" >>beam.io.WriteToText(file_path_prefix=invalid_out_path,file_name_suffix=file_name_suffix)
+    )
     
-    
-# python test.py  --project electric-armor-395015 --region europe-west2 --temp_location gs://${BUCKET}/tmp --staging_location gs://${BUCKET}/staging --job_name aggregate-data --max_num_workers 1 --worker_machine_type n1-standard-4 --runner DataFlowRunner
+    return runner.run_pipeline(pipeline, options=options)
+if __name__ == '__main__':
+    netlog_feature_aggregation()

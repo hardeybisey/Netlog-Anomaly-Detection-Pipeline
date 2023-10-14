@@ -3,21 +3,8 @@ import time
 import logging
 import apache_beam as beam
 from datetime import datetime
-from utils import NetLogRawSchema, NetLogAggSchema, UniqueCombine, JsonToBeamRow
+from utils import NetLogRawSchema, NetLogAggSchema, NetLogFeaturesSchema, UniqueCombine, JsonToBeamRow, EventParser, AddProcessingTime
 
-class EventParser(beam.DoFn):
-    def process(self, element):
-        try:
-            event = json.loads(element.decode('utf-8'))
-            yield beam.pvalue.TaggedOutput('valid', NetLogRawSchema(**event))
-        except:
-            yield beam.pvalue.TaggedOutput('invalid', element.decode('utf-8'))
-
-class AddProcessingTime(beam.DoFn):
-    def process(self, element):
-        element = element._asdict()
-        element['ProcessingTime'] = datetime.now().isoformat()
-        yield dict(element)
 
 pipeline = beam.Pipeline()
 row = (pipeline 
@@ -27,7 +14,7 @@ row = (pipeline
 
 features = (row.valid
             |"Convert To Row" >> beam.ParDo(JsonToBeamRow()) 
-            | "Fixed Window" >> beam.WindowInto(beam.window.FixedWindows(60),
+            | "Fixed Window 1 Min" >> beam.WindowInto(beam.window.FixedWindows(60),
                                           allowed_lateness=beam.window.Duration(seconds=0),
                                           trigger = beam.trigger.AfterWatermark(),
                                           accumulation_mode=beam.trigger.AccumulationMode.DISCARDING)
@@ -44,11 +31,11 @@ features = (row.valid
                                     .aggregate_field("duration", min, "MinDuration")
                                     .aggregate_field("duration", max, "MaxDuration")
                                     .aggregate_field("duration", beam.combiners.MeanCombineFn(), "AvgDuration")
-            |"Add Timestamp Value" >> beam.ParDo(AddProcessingTime()).with_output_types(NetLogAggSchema))
+            |"Add Processing Timestamp" >> beam.ParDo(AddProcessingTime()).with_output_types(NetLogAggSchema))
 
 deadletters = (
     row.invalid 
-    | "Batch Invalid Elements " >> beam.WindowInto(beam.window.FixedWindows(120),
+    | "Batch Invalid Elements" >> beam.WindowInto(beam.window.FixedWindows(120),
                                                    trigger=beam.trigger.AfterProcessingTime(120),
                                                    accumulation_mode=beam.trigger.AccumulationMode.DISCARDING)
     | "Write Invalid Elements to BQ" >> beam.io.WriteToBigQuery(table="table_id",
@@ -59,13 +46,24 @@ deadletters = (
 
 predict_anomaly = (
     features
-    | 'predict_anomaly' >> beam.ParDo(PredictAnomaly("")).with_output_types(NetLogAggSchema)
+    | 'Make Predictions' >> beam.ParDo(PredictAnomaly("")).with_output_types(NetLogAggSchema)
     |  "write Anomaly to BQ" >> beam.io.WriteToBigQuery(table="table_id",
                                                         schema="table_schema",
                                                         write_disposition=beam.io.BigQueryDisposition.WRITE_APPEND,
                                                         create_disposition=beam.io.BigQueryDisposition.CREATE_NEVER)
     )
-    
+
+write_to_log_table = deadletters = (
+    row.valid 
+    | "Batch Invalid Elements" >> beam.WindowInto(beam.window.FixedWindows(120),
+                                                   trigger=beam.trigger.AfterProcessingTime(120),
+                                                   accumulation_mode=beam.trigger.AccumulationMode.DISCARDING)
+    | "Write Invalid Elements to BQ" >> beam.io.WriteToBigQuery(table="table_id",
+                                                                schema="table_schema",
+                                                                write_disposition=beam.io.BigQueryDisposition.WRITE_APPEND,
+                                                                create_disposition=beam.io.BigQueryDisposition.CREATE_NEVER)
+    )
+
 write_to_feature_store = (
     features 
     |"Write Features to BQ" >>beam.io.WriteToBigQuery(table="table_id",                              
@@ -73,3 +71,11 @@ write_to_feature_store = (
                                                     write_disposition=beam.io.BigQueryDisposition.WRITE_APPEND,
                                                     create_disposition=beam.io.BigQueryDisposition.CREATE_NEVER)
     )
+
+
+
+
+#   pcollection | WindowInto(
+#     FixedWindows(1 * 60),
+#     trigger=AfterProcessingTime(1 * 60),
+#     accumulation_mode=AccumulationMode.DISCARDING)

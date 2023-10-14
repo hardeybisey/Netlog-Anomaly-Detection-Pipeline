@@ -38,7 +38,7 @@
     },
     {
       "name": "tcpFlag",
-      "type": "INTEGER"
+      "type": "STRING"
     },
     {
       "name": "protocolName",

@@ -23,7 +23,7 @@
       "type": "INTEGER"
     }, 
     {
-      "name": "Records", 
+      "name": "NumRecords", 
       "type": "INTEGER"
     }, 
     {
