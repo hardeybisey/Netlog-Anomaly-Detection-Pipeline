@@ -36,7 +36,8 @@ class GetFeaturesFromRow(beam.PTransform):
 
 def run(opts, pipeline_opts):   
     valid_out_path = opts.bucket + "/netlog_aggregate/agg"
-    invalid_out_path = opts.bucket + "/netlog_badletters/badletters"
+    invalid_out_path_row = opts.bucket + "/netlog_badletters/row"
+    invalid_out_path_json = opts.bucket + "/netlog_badletters/json"
     options = PipelineOptions(pipeline_opts, save_main_session=True)
     pipeline =  beam.Pipeline(options=options)
     json_rows = (
@@ -56,11 +57,18 @@ def run(opts, pipeline_opts):
         | "Write Features To Cloud Storage" >> beam.io.WriteToText(file_path_prefix=valid_out_path,file_name_suffix=opts.file_name_suffix)
     )
 
-    badletters =  (
-        (json_rows.invalidjson , beam_rows.invalidrow)
+    badjson =  (
+        json_rows.invalidjson
         | "Flatten" >> beam.Flatten()
-        | 'Deduplicate elements' >> beam.Distinct()
-        | "Write Bad Letter To Cloud Storage" >>beam.io.WriteToText(file_path_prefix=invalid_out_path,file_name_suffix=opts.file_name_suffix)
+        | "Write Bad Letter To Cloud Storage" >>beam.io.WriteToText(file_path_prefix=invalid_out_path_json,file_name_suffix=opts.file_name_suffix)
     )
+    
+    badrows = (
+        beam_rows.invalidrow
+        | "Flatten" >> beam.Flatten()
+        | "Write Bad Row To Cloud Storage" >>beam.io.WriteToText(file_path_prefix=invalid_out_path_row,file_name_suffix=opts.file_name_suffix)
+        
+    )
+    
 
     return pipeline.run()

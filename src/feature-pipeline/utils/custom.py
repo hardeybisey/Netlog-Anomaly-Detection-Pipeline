@@ -110,4 +110,4 @@ class JsonToBeamRow(beam.DoFn):
                             duration=duration.total_seconds())
             yield beam.pvalue.TaggedOutput('validrow', row)
         except:
-            yield beam.pvalue.TaggedOutput('invalidrow', element._asdict())
+            yield beam.pvalue.TaggedOutput('invalidrow', element)
