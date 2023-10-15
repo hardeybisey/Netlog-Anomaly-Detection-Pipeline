@@ -58,6 +58,7 @@ class UserObject:
 class JsonEvent:
     max_request_bytes = 5000
     allowed_lag_sec = 10
+    timefmt = "%Y-%m-%dT%H:%M:%S"
     tcp_flag = ["SYN", "ACK", "FIN", "RST", "PSH", "URG"]
     
     @classmethod
@@ -72,8 +73,8 @@ class JsonEvent:
                 "dstPort": network.port,
                 "txBytes": cls._normalized_bytes(time_diff, event_type),
                 "rxBytes": cls._normalized_bytes(time_diff, event_type),
-                "startTime": start_time.isoformat(),
-                "endTime": end_time.isoformat(),
+                "startTime": start_time.strftime(cls.timefmt),
+                "endTime": end_time.strftime(cls.timefmt),
                 "tcpFlag": random.choice(cls.tcp_flag),
                 "protocolName": network.protocol_name,
                 "protocolNumber": network.protocol_num}

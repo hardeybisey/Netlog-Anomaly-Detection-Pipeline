@@ -5,8 +5,7 @@ import google.auth
 import apache_beam as beam
 from datetime import datetime
 from apache_beam.runners import DataflowRunner
-from apache_beam.options import pipeline_options
-from apache_beam.options.pipeline_options import GoogleCloudOptions, StandardOptions, SetupOptions
+from apache_beam.options.pipeline_options import GoogleCloudOptions, StandardOptions, SetupOptions, PipelineOptions
 
 
 bucket = "gs://electric-armor-395015-netlog-bucket"
@@ -98,20 +97,21 @@ class EventParser(beam.DoFn):
 
 class AssignTimeStamp(beam.DoFn):
     def process(self, element):
-        timefmt = "%Y-%m-%dT%H:%M:%S.%f"
+        timefmt = "%Y-%m-%dT%H:%M:%S"
         timestamp = datetime.strptime(element.endTime, timefmt).timestamp()
         yield beam.window.TimestampedValue(element, timestamp)
         
 class AddProcessingTime(beam.DoFn):
     def process(self, element):
+        timefmt = "%Y-%m-%dT%H:%M:%S"
         element = element._asdict()
-        element['ProcessingTime'] = datetime.now().isoformat()
+        element['ProcessingTime'] = datetime.now().strftime(timefmt)
         yield dict(element)
             
 class JsonToBeamRow(beam.DoFn):
     def process(self, element):
         try:
-            timefmt = "%Y-%m-%dT%H:%M:%S.%f"
+            timefmt = "%Y-%m-%dT%H:%M:%S"
             duration = datetime.strptime(element.endTime, timefmt) - datetime.strptime(element.startTime, timefmt)
             row = beam.Row(subscriberId=element.subscriberId,
                             srcIP=element.srcIP,
