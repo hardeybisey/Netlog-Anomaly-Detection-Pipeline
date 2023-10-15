@@ -3,19 +3,6 @@ import json
 import apache_beam as beam
 from datetime import datetime
 
-class NetLogFeaturesSchema(typing.NamedTuple):
-    subscriberId : str
-    NumRecords : int
-    MinTxBytes: int
-    MaxTxBytes: int
-    AvgTxBytes: float
-    MinRxBytes: int
-    MaxRxBytes: int
-    AvgRxBytes: float
-    MinDuration: float
-    MaxDuration: float
-    AvgDuration: float
-
 class NetLogRawSchema(typing.NamedTuple):
     subscriberId : str
     srcIP : str
@@ -30,22 +17,6 @@ class NetLogRawSchema(typing.NamedTuple):
     protocolName : str
     protocolNumber : int
 
-class NetLogAggSchema(typing.NamedTuple):
-    ProcessingTime : datetime
-    subscriberId : str
-    dstIP : str
-    UniqueIPs : int
-    UniquePorts : int
-    NumRecords : int
-    MinTxBytes: int
-    MaxTxBytes: int
-    AvgTxBytes: float
-    MinRxBytes: int
-    MaxRxBytes: int
-    AvgRxBytes: float
-    MinDuration: float
-    MaxDuration: float
-    AvgDuration: float
 
 class NetLogRowSchema(typing.NamedTuple):
     subscriberId: str
@@ -81,7 +52,7 @@ class EventParser(beam.DoFn):
         except:
             yield beam.pvalue.TaggedOutput('invalidjson', element)
 
-class AssignTimeStamp(beam.DoFn):
+class AddTimeStamp(beam.DoFn):
     def process(self, element):
         timefmt = "%Y-%m-%dT%H:%M:%S.%f"
         timestamp = datetime.strptime(element.endTime, timefmt).timestamp()
@@ -91,7 +62,7 @@ class AddProcessingTime(beam.DoFn):
     def process(self, element):
         element = element._asdict()
         element['ProcessingTime'] = datetime.now().isoformat()
-        yield NetLogAggSchema(**element)
+        yield element
             
 class JsonToBeamRow(beam.DoFn):
     def process(self, element):

@@ -1,19 +1,16 @@
 import apache_beam as beam
 from apache_beam.options.pipeline_options import PipelineOptions
-from utils.custom import NetLogRawSchema, NetLogAggSchema, NetLogRowSchema, NetLogFeaturesSchema
-from utils.custom import UniqueCombine, EventParser, JsonToBeamRow, AssignTimeStamp, AddProcessingTime
-
+from utils.custom import NetLogRawSchema, NetLogRowSchema
+from utils.custom import UniqueCombine, EventParser, JsonToBeamRow, AddTimeStamp, AddProcessingTime
 
 beam.coders.registry.register_coder(NetLogRawSchema, beam.coders.RowCoder)
-beam.coders.registry.register_coder(NetLogAggSchema, beam.coders.RowCoder)
 beam.coders.registry.register_coder(NetLogRowSchema, beam.coders.RowCoder)
-beam.coders.registry.register_coder(NetLogFeaturesSchema, beam.coders.RowCoder)
     
 class GetFeaturesFromRow(beam.PTransform):
     def expand(self, pcoll):
         return (
             pcoll
-            | "With timestamps" >> beam.ParDo(AssignTimeStamp())
+            | "With timestamps" >> beam.ParDo(AddTimeStamp())
             | "Fixed Window 1 Min" >> beam.WindowInto(beam.window.FixedWindows(120),
                               allowed_lateness=beam.window.Duration(seconds=0),
                               trigger = beam.trigger.AfterWatermark(),
@@ -21,7 +18,7 @@ class GetFeaturesFromRow(beam.PTransform):
             | "Aggregate Row" >> beam.GroupBy("subscriberId","dstIP")
                         .aggregate_field("srcIP", UniqueCombine(), "UniqueIPs")
                         .aggregate_field("srcPort", UniqueCombine(), "UniquePorts")
-                        .aggregate_field("subscriberId", beam.combiners.CountCombineFn(),"Records")
+                        .aggregate_field("subscriberId", beam.combiners.CountCombineFn(),"NumRecords")
                         .aggregate_field("txBytes", min ,"MinTxBytes")
                         .aggregate_field("txBytes", max ,"MaxTxBytes")
                         .aggregate_field("txBytes", beam.combiners.MeanCombineFn() ,"AvgTxBytes")
@@ -35,9 +32,9 @@ class GetFeaturesFromRow(beam.PTransform):
                )
 
 def run(opts, pipeline_opts):   
-    valid_out_path = opts.bucket + "/netlog_aggregate/agg"
-    invalid_out_path_row = opts.bucket + "/netlog_badletters/row"
-    invalid_out_path_json = opts.bucket + "/netlog_badletters/json"
+    valid_out_path = opts.bucket + "/aggregate/"
+    invalid_out_path_row = opts.bucket + "/badletters/row/"
+    invalid_out_path_json = opts.bucket + "/badletters/json/"
     options = PipelineOptions(pipeline_opts, save_main_session=True)
     pipeline =  beam.Pipeline(options=options)
     json_rows = (
@@ -53,7 +50,7 @@ def run(opts, pipeline_opts):
 
     features = (
         beam_rows.validrow
-        | "Get Features" >> GetFeaturesFromRow().with_output_types(NetLogAggSchema)
+        | "Get Features" >> GetFeaturesFromRow()
         | "Write Features To Cloud Storage" >> beam.io.WriteToText(file_path_prefix=valid_out_path,file_name_suffix=opts.file_name_suffix)
     )
 
