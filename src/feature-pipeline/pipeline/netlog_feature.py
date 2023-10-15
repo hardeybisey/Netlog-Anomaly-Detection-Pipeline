@@ -59,13 +59,11 @@ def run(opts, pipeline_opts):
 
     badjson =  (
         json_rows.invalidjson
-        | "Flatten" >> beam.Flatten()
-        | "Write Bad Letter To Cloud Storage" >>beam.io.WriteToText(file_path_prefix=invalid_out_path_json,file_name_suffix=opts.file_name_suffix)
+        | "Write Bad Json To Cloud Storage" >>beam.io.WriteToText(file_path_prefix=invalid_out_path_json,file_name_suffix=opts.file_name_suffix)
     )
     
     badrows = (
         beam_rows.invalidrow
-        | "Flatten" >> beam.Flatten()
         | "Write Bad Row To Cloud Storage" >>beam.io.WriteToText(file_path_prefix=invalid_out_path_row,file_name_suffix=opts.file_name_suffix)
         
     )
