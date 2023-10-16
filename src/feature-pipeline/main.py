@@ -1,12 +1,23 @@
 import argparse
 from pipeline.netlog_feature import run
 
-
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Build features from netlog data')
-    # Google Cloud options
-    parser.add_argument('--bucket',default="gs://electric-armor-395015-netlog-bucket")
-    parser.add_argument('--file_name_suffix', default="json")
-    parser.add_argument('--files', default="gs://electric-armor-395015-netlog-bucket/*/*.json")
-    opts, pipeline_opts = parser.parse_known_args()
-    run(opts, pipeline_opts)
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--bucket', type = str,
+        help='cloud storage bucket to write pipeline output',required=True)
+            
+    parser.add_argument(
+        '--file_name_suffix',type=str,
+        help='suffix for to use for files written to cloud storage',required=True)
+    
+    parser.add_argument(
+        '--topic',type=str,
+        help='pub sub topic to read from',required=True)
+    
+    parser.add_argument(
+        '--netlog_bq_table',type=str,
+        help='pub sub topic to read from',required=True)
+
+    args, beam_args = parser.parse_known_args()
+    run(args, beam_args)

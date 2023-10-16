@@ -2,5 +2,33 @@
     "name": "Netlog-feature-template",
     "description": "Netlog feature Dataflow Flex template",
     "parameters": [
+        {
+            "name": "topic",
+            "label": "Pub/Sub topic",
+            "helpText": "Pub/Sub topic to read from",
+            "description": "Pub/Sub topic to read from",
+            "isOptional": false
+        },
+        {
+            "name": "bucket",
+            "label": "bucket",
+            "helpText": "storage bucket to write pipeline output",
+            "description": "storage bucket to write pipeline output",
+            "isOptional": false            
+        },
+        {
+            "name": "file_name_suffix",
+            "label": "file_name_suffix",
+            "helpText": "suffix for to use for files written to cloud storage",
+            "description": "suffix for to use for files written to cloud storage",
+            "isOptional": false
+        },
+        {
+            "name": "netlog_bq_table",
+            "label": "netlog_bq_table",
+            "helpText": "BigQuery table to write netlog raw data",
+            "description": "BigQuery table to write netlog raw data",
+            "isOptional": false
+        }
     ]    
 }

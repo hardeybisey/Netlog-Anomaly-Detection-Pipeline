@@ -1,4 +1,5 @@
 import random
+import json
 from faker import Faker
 from typing import NamedTuple
 from datetime import datetime, timedelta
@@ -84,3 +85,6 @@ class JsonEvent:
         random_byte = random.uniform(10, 100)
         normalized_byte = int(min((random_byte * lag_time), cls.max_request_bytes))
         return normalized_byte if event_type == "normal" else (normalized_byte * 20)
+    
+def to_json(event):
+    return json.dumps(event).encode('utf-8')

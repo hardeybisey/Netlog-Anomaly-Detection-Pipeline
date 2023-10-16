@@ -1,9 +1,6 @@
-
-import time
-import json
 import random
 import apache_beam as beam
-from utils.custom import NetworkPool, UserObject, JsonEvent
+from utils.custom import NetworkPool, UserObject, JsonEvent, to_json 
 from apache_beam.transforms.periodicsequence import PeriodicImpulse
 from apache_beam.options.pipeline_options import PipelineOptions
 
@@ -24,9 +21,6 @@ class EventGenerator(beam.DoFn):
             event = JsonEvent.generate(user, network, self.event_type)
             yield event
 
-def to_json(event):
-    return json.dumps(event).encode('utf-8')
-
 def run(args, beam_args):
     options = PipelineOptions(beam_args, save_main_session=True, streaming=True)
     pipeline = beam.Pipeline(options=options)
@@ -35,6 +29,6 @@ def run(args, beam_args):
         | "PeriodicImpulse" >> PeriodicImpulse(fire_interval=(60/int(args.qps)))
         | "Generate Events" >> beam.ParDo(EventGenerator(args.event_type))
         | "JSONIFY" >> beam.Map(to_json)
-        | "Write to PubSub" >> beam.io.WriteToPubSub(args.topic, timestamp_attribute='timeStamp')
+        | "Write to PubSub" >> beam.io.WriteToPubSub(args.topic)
     )
     return pipeline.run()

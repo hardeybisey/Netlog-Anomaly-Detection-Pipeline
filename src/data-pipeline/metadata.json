@@ -6,7 +6,7 @@
             "name": "topic",
             "label": "Pub/Sub topic",
             "helpText": "Pub/Sub topic to read from",
-            "description": "Pub/Sub topic to write to",
+            "description": "Pub/Sub topic to read from",
             "isOptional": false
         },
         {
