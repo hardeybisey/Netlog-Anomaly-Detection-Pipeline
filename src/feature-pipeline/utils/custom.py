@@ -51,7 +51,7 @@ class EventParser(beam.DoFn):
     def process(self, element):
         try:
             event = json.loads(element.decode('utf-8'))
-            yield beam.pvalue.TaggedOutput('validj', NetLogRawSchema(**event))
+            yield beam.pvalue.TaggedOutput('valid', NetLogRawSchema(**event))
         except:
             yield beam.pvalue.TaggedOutput('invalid', element.decode('utf-8'))
 

@@ -1,28 +1,61 @@
 steps:
+  # 1) Create a bucket
   - name: gcr.io/cloud-builders/gsutil
+    id: 'create-bucket'
     args: ['mb', '-c', 'standard', '-l','europe-west1', 'gs://${_BUCKET}']
+
+  # 2a) Create a Pub/Sub topic
   - name: gcr.io/cloud-builders/gcloud
+    id: 'create-pubsub-topic'
     args: ['pubsub', 'topics', 'create', '${_TOPIC_NAME}']
+
+  # 2b) Create a Pub/Sub subscription
   - name: gcr.io/cloud-builders/gcloud
+    id: 'create-pubsub-subscription'
     args: ['pubsub', 'subscriptions', 'create', '${_SUBSCRIPTION_ID}', '--topic', '${_TOPIC_NAME}']
+
+  # 3a) Create dataset to store netlog tables
   - name: gcr.io/cloud-builders/gcloud
+    id: 'create-bq-dataset'
     entrypoint: 'bq'
     args: ['mk', '-d', '--description', 'Network Flow Log Dataset', '--location=EU', '${_DATASET_ID}']
+
+  # 3b) Create tabl to store netlog raw data
   - name: gcr.io/cloud-builders/gcloud
+    id : 'create-bq-table'
     entrypoint: 'bq'
     args: ['mk', '-t', '--schema','schema/net_log_raw.json',  '--time_partitioning_type=DAY', '--clustering_fields=dstIP,subscriberId', '${PROJECT_ID}:${_DATASET_ID}.${_TABLE_ID}']
+  
+  # 4a) Create a Dataflow Flex Template for the data generator pipeline
   - name: gcr.io/cloud-builders/docker
+    id: 'build-data-pipeline-image'
     args: ['build', '-t', 'gcr.io/${PROJECT_ID}/netlog-stream-template:${_TAG}', 'src/data-pipeline/.']
+  
+  # 4b) Build the Dataflow Flex Template for the data generator pipeline
   - name: gcr.io/cloud-builders/gcloud
+    id: 'build-data-pipeline-flex-template'
     args: [ 'dataflow', 'flex-template', 'build', 'gs://${_BUCKET}/templates/netlog-stream.json', '--project=${PROJECT_ID}', '--image=gcr.io/${PROJECT_ID}/netlog-stream-template:${_TAG}', '--sdk-language=PYTHON', '--metadata-file=src/data-pipeline/metadata.json'] 
-  - name: gcr.io/cloud-builders/docker
-    args: ['build', '-t', 'gcr.io/${PROJECT_ID}/netlog-feature-template:${_TAG}', 'src/feature-pipeline/.']
+
+  # 4c) Run the Dataflow Flex Template for the data generator pipeline
   - name: gcr.io/cloud-builders/gcloud
-    args: [ 'dataflow', 'flex-template', 'build', 'gs://${_BUCKET}/templates/netlog-feature.json', '--project=${PROJECT_ID}', '--image=gcr.io/${PROJECT_ID}/netlog-feature-template:${_TAG}', '--sdk-language=PYTHON', '--metadata-file=src/feature-pipeline/metadata.json'] 
-  - name: gcr.io/cloud-builders/gcloud
+    id: 'run-data-pipeline'
     args: ['dataflow', 'flex-template', 'run', 'netlog-stream-job-final', '--template-file-gcs-location=gs://${_BUCKET}/templates/netlog-stream.json','--region=europe-west2', '--worker-machine-type=n1-standard-4','--num-workers=1','--max-workers=5','--parameters=topic=projects/${PROJECT_ID}/topics/${_TOPIC_NAME},qps=10000,event_type=${_EVENT_TYPE}']
+
+  # 5a) Create a Dataflow Flex Template for the feature pipeline
+  - name: gcr.io/cloud-builders/docker
+    id: 'build-feature-pipeline-image'
+    args: ['build', '-t', 'gcr.io/${PROJECT_ID}/netlog-feature-template:${_TAG}', 'src/feature-pipeline/.']
+
+  # 5b) Build the Dataflow Flex Template for the feature pipeline
   - name: gcr.io/cloud-builders/gcloud
-    args: ['dataflow', 'flex-template', 'run', 'netlog-feature-job-final', '--template-file-gcs-location=gs://${_BUCKET}/templates/netlog-feature.json','--region=europe-west2', '--worker-machine-type=n1-standard-4','--num-workers=1','--max-workers=5','--parameters=topic=projects/${PROJECT_ID}/topics/${_TOPIC_NAME},netlog_bq_table=${PROJECT_ID}:${_DATASET_ID}.${_TABLE_ID},bucket=gs://${_BUCKET},file_name_suffix=.json']
+    id : 'build-feature-pipeline-flex-template'
+    args: [ 'dataflow', 'flex-template', 'build', 'gs://${_BUCKET}/templates/netlog-feature.json', '--project=${PROJECT_ID}', '--image=gcr.io/${PROJECT_ID}/netlog-feature-template:${_TAG}', '--sdk-language=PYTHON', '--metadata-file=src/feature-pipeline/metadata.json'] 
+  
+  # 5c) Run the Dataflow Flex Template for the feature pipeline
+  - name: gcr.io/cloud-builders/gcloud
+    id: 'run-feature-pipeline'
+    args: ['dataflow', 'flex-template', 'run', 'netlog-feature-job-final', '--template-file-gcs-location=gs://${_BUCKET}/templates/netlog-feature.json','--region=europe-west2', '--worker-machine-type=n1-standard-4','--num-workers=1','--max-workers=5','--parameters=topic=projects/${PROJECT_ID}/topics/${_TOPIC_NAME},netlog_bq_table=${PROJECT_ID}:${_DATASET_ID}.${_TABLE_ID},bucket=gs://${_BUCKET},file_name_suffix=json']
+
 images:
   - 'gcr.io/${PROJECT_ID}/netlog-feature-template:${_TAG}'
   - 'gcr.io/${PROJECT_ID}/netlog-stream-template:${_TAG}'
