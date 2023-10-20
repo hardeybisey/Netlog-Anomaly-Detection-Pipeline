@@ -1,4 +1,5 @@
-[
+{
+  "fields": [
     {
       "mode": "REQUIRED", 
       "name": "ProcessingTime", 
@@ -63,3 +64,4 @@
       "type": "FLOAT"
     }
   ]
+}

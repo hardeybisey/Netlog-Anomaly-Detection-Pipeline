@@ -1,0 +1,63 @@
+[
+    {
+      "mode": "REQUIRED",
+      "name": "subscriberId",
+      "type": "STRING"
+    },
+    {
+      "name": "srcIP",
+      "type": "STRING"
+    },
+    {
+      "name": "dstIP",
+      "type": "STRING"
+    },
+    {
+      "name": "srcPort",
+      "type": "INTEGER"
+    },
+    {
+      "name": "dstPort",
+      "type": "INTEGER"
+    },
+    {
+      "name": "txBytes",
+      "type": "INTEGER"
+    },
+    {
+      "name": "rxBytes",
+      "type": "INTEGER"
+    },
+    {
+      "name": "startTime",
+      "type": "DATETIME"
+    },
+    {
+      "name": "endTime",
+      "type": "DATETIME"
+    },
+    {
+      "name":"duration",
+      "type":"FLOAT"
+    },
+    {
+      "name": "publishTime",
+      "type": "DATETIME"
+    },
+    {
+      "name": "ProcessingTime",
+      "type": "DATETIME"
+    },
+    {
+      "name": "tcpFlag",
+      "type": "STRING"
+    },
+    {
+      "name": "protocolName",
+      "type": "STRING"
+    },
+    {
+      "name": "protocolNumber",
+      "type": "INTEGER"
+    }
+  ]

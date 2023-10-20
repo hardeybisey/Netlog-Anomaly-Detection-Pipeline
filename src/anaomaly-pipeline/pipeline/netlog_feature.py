@@ -1,11 +1,13 @@
 import apache_beam as beam
 from apache_beam.options.pipeline_options import PipelineOptions
-from utils.custom import NetLogRawSchema, NetLogRowSchema, netlogbqschema
+from utils.custom import NetLogRawSchema, NetLogRowSchema
 from utils.custom import UniqueCombine, EventParser, JsonToBeamRow, AddProcessingTime
 
 beam.coders.registry.register_coder(NetLogRawSchema, beam.coders.RowCoder)
 beam.coders.registry.register_coder(NetLogRowSchema, beam.coders.RowCoder)
 
+
+netlogbqschema = "subscriberId:STRING,srcIP:STRING,dstIP:STRING,srcPort:INTEGER,dstPort:INTEGER,txBytes:INTEGER,rxBytes:INTEGER,startTime:DATETIME,endTime:DATETIME,tcpFlag:STRING,protocolName:STRING,protocolNumber:INTEGER"
     
 class GetFeaturesFromRow(beam.PTransform):
     def expand(self, pcoll):
@@ -46,7 +48,7 @@ def run(args, beam_args):
                                         trigger = beam.trigger.AfterWatermark(),
                                         accumulation_mode=beam.trigger.AccumulationMode.DISCARDING)
         | "NetLogRawToDict" >> beam.Map(lambda x: x._asdict())
-        | "WriteRawLogsToBigquery" >> beam.io.WriteToBigQuery(table_name=args.netlog_bq_table,
+        | "WriteRawLogsToBigquery" >> beam.io.WriteToBigQuery(table=args.netlog_bq_table,
                                                     schema=netlogbqschema,
                                                     create_disposition=beam.io.BigQueryDisposition.CREATE_NEVER,
                                                     write_disposition=beam.io.BigQueryDisposition.WRITE_APPEND)  

@@ -1,4 +1,5 @@
-[
+{
+  "fields": [
     {
       "mode": "REQUIRED",
       "name": "subscriberId",
@@ -37,6 +38,18 @@
       "type": "DATETIME"
     },
     {
+      "name":"duration",
+      "type":"FLOAT"
+    },
+    {
+      "name": "publishTime",
+      "type": "DATETIME"
+    },
+    {
+      "name": "ProcessingTime",
+      "type": "DATETIME"
+    },
+    {
       "name": "tcpFlag",
       "type": "STRING"
     },
@@ -49,3 +62,4 @@
       "type": "INTEGER"
     }
   ]
+}
